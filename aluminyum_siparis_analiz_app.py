@@ -243,6 +243,175 @@ def build_profile_summary(filtered: pd.DataFrame, hedef_uretim: int) -> pd.DataF
         ascending=[False, False]
     )
 
+def build_high_volume_profile_summary(scope_df: pd.DataFrame, min_boy: int, hedef_uretim: int) -> pd.DataFrame:
+    filtered = scope_df[scope_df["adet"] >= min_boy].copy()
+
+    if filtered.empty:
+        return pd.DataFrame(columns=[
+            "Profil Kodu",
+            "Toplam Sipariş Kalemi",
+            "Farklı Sipariş Sayısı",
+            "Toplam Üretilen Boy",
+            "Sipariş Başına Ortalama Boy",
+            "İlk Sipariş Tarihi",
+            "Son Sipariş Tarihi",
+            "Yıllık Tüketim",
+            "Yeni Akıllı Öneri (Boy)"
+        ])
+
+    profile = filtered.groupby("profil", as_index=False).agg(
+        toplam_siparis_kalemi=("siparis_no", "size"),
+        farkli_siparis_sayisi=("siparis_no", pd.Series.nunique),
+        toplam_uretilen_boy=("adet", "sum"),
+        ilk_tarih=("tarih", "min"),
+        son_tarih=("tarih", "max"),
+    )
+
+    profile["siparis_basina_ortalama_boy"] = (
+        profile["toplam_uretilen_boy"] / profile["farkli_siparis_sayisi"]
+    ).round(2)
+
+    profile["ilk_tarih"] = profile["ilk_tarih"].dt.strftime("%Y-%m-%d")
+    profile["son_tarih"] = profile["son_tarih"].dt.strftime("%Y-%m-%d")
+
+    yil_sayisi = max(filtered["yil"].nunique(), 1)
+
+    profile["Yıllık Tüketim"] = (
+        profile["toplam_uretilen_boy"] / yil_sayisi
+    ).round(0)
+
+    profile["Yeni Akıllı Öneri (Boy)"] = (
+        profile["Yıllık Tüketim"] / hedef_uretim
+    ).round(0)
+
+    profile.columns = [
+        "Profil Kodu",
+        "Toplam Sipariş Kalemi",
+        "Farklı Sipariş Sayısı",
+        "Toplam Üretilen Boy",
+        "İlk Sipariş Tarihi",
+        "Son Sipariş Tarihi",
+        "Sipariş Başına Ortalama Boy",
+        "Yıllık Tüketim",
+        "Yeni Akıllı Öneri (Boy)"
+    ]
+
+    return profile.sort_values(
+        ["Toplam Üretilen Boy", "Toplam Sipariş Kalemi"],
+        ascending=[False, False]
+    )
+
+
+def build_high_volume_year_summary(scope_df: pd.DataFrame, min_boy: int) -> pd.DataFrame:
+    filtered = scope_df[scope_df["adet"] >= min_boy].copy()
+
+    if filtered.empty:
+        return pd.DataFrame(columns=[
+            "yil",
+            "satir_sayisi",
+            "benzersiz_siparis",
+            "benzersiz_profil",
+            "toplam_adet",
+            "toplam_kg"
+        ])
+
+    year = filtered.groupby("yil", as_index=False).agg(
+        satir_sayisi=("siparis_no", "size"),
+        benzersiz_siparis=("siparis_no", pd.Series.nunique),
+        benzersiz_profil=("profil", pd.Series.nunique),
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", "sum"),
+    )
+    year["toplam_kg"] = year["toplam_kg"].round(2)
+    return year.sort_values("yil")
+
+
+def build_high_volume_raw(scope_df: pd.DataFrame, min_boy: int) -> pd.DataFrame:
+    filtered = scope_df[scope_df["adet"] >= min_boy].copy()
+
+    if filtered.empty:
+        return pd.DataFrame(columns=["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"])
+
+    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
+    raw = filtered[raw_cols].sort_values("adet", ascending=False).copy()
+    raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
+    return raw.head(500)
+
+
+def high_volume_summary_markdown(scope_df: pd.DataFrame, min_boy: int) -> str:
+    filtered = scope_df[scope_df["adet"] >= min_boy].copy()
+
+    if filtered.empty:
+        return "### Sonuç\nSeçilen filtrelere göre yüksek üretim kaydı bulunamadı."
+
+    yil_min = int(filtered["yil"].min())
+    yil_max = int(filtered["yil"].max())
+
+    toplam_satir = len(filtered)
+    toplam_siparis = filtered["siparis_no"].nunique()
+    toplam_profil = filtered["profil"].nunique()
+    toplam_adet = int(filtered["adet"].sum())
+    toplam_kg = float(filtered["kg"].fillna(0).sum())
+
+    ort_boy = round(filtered["adet"].mean(), 2)
+
+    en_cok = (
+        filtered.groupby("profil", as_index=False)
+        .agg(toplam_adet=("adet", "sum"))
+        .sort_values("toplam_adet", ascending=False)
+        .head(1)
+    )
+
+    if not en_cok.empty:
+        lider_profil = en_cok.iloc[0]["profil"]
+        lider_adet = int(en_cok.iloc[0]["toplam_adet"])
+    else:
+        lider_profil = "-"
+        lider_adet = 0
+
+    lines = [
+        "## 🟢 Büyük Sipariş Analizi (Core Üretim)",
+        "",
+        "### En Çok Üretime Giren Ürünler Özeti",
+        f"- Kriter: **{min_boy} boy ve üstü**",
+        f"- Tarih aralığı: **{yil_min} - {yil_max}**",
+        f"- Toplam sipariş satırı: **{toplam_satir:,}**",
+        f"- Benzersiz sipariş sayısı: **{toplam_siparis:,}**",
+        f"- Benzersiz profil sayısı: **{toplam_profil:,}**",
+        f"- Toplam üretilen boy: **{toplam_adet:,}**",
+        f"- Toplam kg: **{toplam_kg:,.2f}**",
+        f"- Ortalama sipariş boyu: **{ort_boy:,}**",
+        f"- En çok üretime giren profil: **{lider_profil}**",
+        f"- Bu profilin toplam üretimi: **{lider_adet:,} boy**",
+    ]
+
+    return "\n".join(lines)
+
+
+def high_volume_chart(profile_summary: pd.DataFrame, top_n_value: int):
+    if profile_summary.empty:
+        return None
+
+    top_n = profile_summary.head(top_n_value).sort_values("Toplam Üretilen Boy")
+
+    grafik_yuksekligi = max(500, top_n_value * 35)
+
+    fig = px.bar(
+        top_n,
+        x="Toplam Üretilen Boy",
+        y="Profil Kodu",
+        orientation="h",
+        title=f"En çok üretime giren profiller (ilk {top_n_value})",
+        text="Toplam Üretilen Boy",
+        hover_data=["Toplam Sipariş Kalemi", "Farklı Sipariş Sayısı", "Yıllık Tüketim"],
+    )
+
+    fig.update_layout(
+        height=grafik_yuksekligi,
+        yaxis={"automargin": True}
+    )
+    return fig
+    
 def build_year_summary(filtered: pd.DataFrame) -> pd.DataFrame:
     if filtered.empty:
         return pd.DataFrame(columns=["yil", "satir_sayisi", "benzersiz_siparis", "benzersiz_profil", "toplam_adet", "toplam_kg"])
@@ -468,22 +637,27 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     # Boy filtresi uygulanmış veri
     filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
 
-    md = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
+    summary_small_text = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
     boy_df = build_boy_breakdown(filtered, int(secilen_boy))
     hedef_uretim = int(hedef_uretim)
     top_n_value = int(top_n_sec)
     profile_df = build_profile_summary(filtered, hedef_uretim)
     year_df = build_year_summary(filtered)
     monthly_load_df = build_small_order_monthly(scope_df, int(secilen_boy))
+
+    high_md = high_volume_summary_markdown(scope_df, int(secilen_boy))
+    high_profile_df = build_high_volume_profile_summary(scope_df, int(secilen_boy), hedef_uretim)
+    high_year_df = build_high_volume_year_summary(scope_df, int(secilen_boy))
+    high_raw_df = build_high_volume_raw(scope_df, int(secilen_boy))
     
     raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
 
-    profile_list = profile_df["Profil Kodu"].tolist()
+    profile_list = profile_df["Profil Kodu"].tolist() if not profile_df.empty else []
 
     return (
-        md,
+        summary_small_text,
         boy_df,
         year_df,
         profile_df,
@@ -493,6 +667,11 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         top_profiles_chart(profile_df, top_n_value),
         monthly_chart(filtered),
         small_order_load_chart(monthly_load_df, int(secilen_boy)),
+        high_md,
+        high_year_df,
+        high_profile_df,
+        high_raw_df,
+        high_volume_chart(high_profile_df, top_n_value),
         gr.update(choices=profile_list, value=profile_list[0] if profile_list else None)
     )
 
@@ -545,42 +724,61 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
     with gr.Row():
         load_btn = gr.Button("Yılları yükle")
         analyze_btn = gr.Button("Analizi çalıştır", variant="primary")
-
-    summary = gr.Markdown()
-    with gr.Row():
-        chart1 = gr.Plot(label="Boy dağılımı")
-        chart2 = gr.Plot(label="Top profiller")
-    chart3 = gr.Plot(label="Aylık trend")
-    chart4 = gr.Plot(label="Küçük Boy Sipariş Yükü")
-
+    
     with gr.Tabs():
-        with gr.Tab("Boy Kırılımı"):
-            boy_table = gr.Dataframe(interactive=False, wrap=True)
-        with gr.Tab("Yıl Özeti"):
-            year_table = gr.Dataframe(interactive=False, wrap=True)
-        with gr.Tab("Profil Özeti"):
-            profile_table = gr.Dataframe(interactive=False, wrap=True)
-
-            gr.Markdown("## 🔍 Profil Detay")
-
-            profil_sec = gr.Dropdown(label="Profil seç", choices=[])
-
-            detail_summary = gr.Markdown()
-            detail_year = gr.Dataframe(label="Yıllık Detay")
-            detail_boy = gr.Dataframe(label="Boy Dağılımı")
-            
-        with gr.Tab("Aylık Yük Analizi"):
-            monthly_load_table = gr.Dataframe(interactive=False, wrap=True)
-        
-        with gr.Tab("Ham Kayıt Önizleme"):
-            raw_table = gr.Dataframe(interactive=False, wrap=True)
+        with gr.Tab("En Az Üretime Giren Ürünlerin Listesi"):
+            summary_small = gr.Markdown()
+    
+            with gr.Row():
+                chart1 = gr.Plot(label="Boy dağılımı")
+                chart2 = gr.Plot(label="Top profiller")
+    
+            chart3 = gr.Plot(label="Aylık trend")
+            chart4 = gr.Plot(label="Küçük Boy Sipariş Yükü")
+    
+            with gr.Tabs():
+                with gr.Tab("Boy Kırılımı"):
+                    boy_table = gr.Dataframe(interactive=False, wrap=True)
+    
+                with gr.Tab("Yıl Özeti"):
+                    year_table = gr.Dataframe(interactive=False, wrap=True)
+    
+                with gr.Tab("Profil Özeti"):
+                    profile_table = gr.Dataframe(interactive=False, wrap=True)
+    
+                    gr.Markdown("## 🔍 Profil Detay")
+                    profil_sec = gr.Dropdown(label="Profil seç", choices=[])
+    
+                    detail_summary = gr.Markdown()
+                    detail_year = gr.Dataframe(label="Yıllık Detay")
+                    detail_boy = gr.Dataframe(label="Boy Dağılımı")
+    
+                with gr.Tab("Aylık Yük Analizi"):
+                    monthly_load_table = gr.Dataframe(interactive=False, wrap=True)
+    
+                with gr.Tab("Ham Kayıt Önizleme"):
+                    raw_table = gr.Dataframe(interactive=False, wrap=True)
+    
+        with gr.Tab("En Çok Üretime Giren Ürünlerin Listesi"):
+            high_summary = gr.Markdown()
+            high_chart = gr.Plot(label="En Çok Üretime Giren Profiller")
+    
+            with gr.Tabs():
+                with gr.Tab("Yıl Özeti"):
+                    high_year_table = gr.Dataframe(interactive=False, wrap=True)
+    
+                with gr.Tab("Profil Özeti"):
+                    high_profile_table = gr.Dataframe(interactive=False, wrap=True)
+    
+                with gr.Tab("Ham Kayıt Önizleme"):
+                    high_raw_table = gr.Dataframe(interactive=False, wrap=True)
 
     load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
     analyze_btn.click(
         fn=analyze,
         inputs=[excel_file, secilen_boy, mod, years, profil_ara, hedef_uretim, top_n_sec],
         outputs=[
-            summary,
+            summary_small,
             boy_table,
             year_table,
             profile_table,
@@ -590,6 +788,11 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
             chart2,
             chart3,
             chart4,
+            high_summary,
+            high_year_table,
+            high_profile_table,
+            high_raw_table,
+            high_chart,
             profil_sec
         ],
     )
