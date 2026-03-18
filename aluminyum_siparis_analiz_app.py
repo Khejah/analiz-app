@@ -130,7 +130,17 @@ def filter_data(df: pd.DataFrame, secilen_boy: int, mod: str, yillar: Iterable[i
         filtered = filtered[filtered["profil"].str.upper().str.contains(profil_ara, na=False)]
     return filtered
 
+def filter_scope_data(df: pd.DataFrame, yillar: Iterable[int], profil_ara: str = "") -> pd.DataFrame:
+    filtered = df.copy()
 
+    if yillar:
+        filtered = filtered[filtered["yil"].isin([int(y) for y in yillar])]
+
+    profil_ara = (profil_ara or "").strip().upper()
+    if profil_ara:
+        filtered = filtered[filtered["profil"].str.upper().str.contains(profil_ara, na=False)]
+
+    return filtered
 
 def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFrame:
     rows = []
@@ -319,15 +329,87 @@ def monthly_chart(filtered: pd.DataFrame):
     fig.update_layout(height=400)
     return fig
 
+def build_small_order_monthly(scope_df: pd.DataFrame, secilen_boy: int) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame(columns=[
+            "ay",
+            "toplam_satir",
+            "kucuk_satir",
+            "satir_oran",
+            "toplam_adet",
+            "kucuk_adet",
+            "adet_oran"
+        ])
+
+    toplam = scope_df.groupby("ay", as_index=False).agg(
+        toplam_satir=("siparis_no", "size"),
+        toplam_adet=("adet", "sum"),
+    )
+
+    kucuk = scope_df[scope_df["adet"] <= secilen_boy].groupby("ay", as_index=False).agg(
+        kucuk_satir=("siparis_no", "size"),
+        kucuk_adet=("adet", "sum"),
+    )
+
+    merged = pd.merge(toplam, kucuk, on="ay", how="left").fillna(0)
+
+    merged["kucuk_satir"] = merged["kucuk_satir"].astype(int)
+    merged["kucuk_adet"] = merged["kucuk_adet"].astype(int)
+
+    merged["satir_oran"] = (
+        merged["kucuk_satir"] / merged["toplam_satir"] * 100
+    ).round(1)
+
+    merged["adet_oran"] = (
+        merged["kucuk_adet"] / merged["toplam_adet"] * 100
+    ).round(1)
+
+    return merged.sort_values("ay")
 
 
-def summary_markdown(filtered: pd.DataFrame, secilen_boy: int, mod: str) -> str:
+def small_order_load_chart(monthly_load: pd.DataFrame, secilen_boy: int):
+    if monthly_load.empty:
+        return None
+
+    fig = px.line(
+        monthly_load,
+        x="ay",
+        y="adet_oran",
+        markers=True,
+        title=f"{secilen_boy} Boy ve Altı Siparişlerin Aylık Üretim Payı (%)",
+        hover_data=["toplam_adet", "kucuk_adet", "satir_oran", "toplam_satir", "kucuk_satir"],
+    )
+    fig.update_layout(height=400)
+    return fig
+
+def summary_markdown(
+    filtered: pd.DataFrame,
+    scope_df: pd.DataFrame,
+    secilen_boy: int,
+    mod: str
+) -> str:
     if filtered.empty:
         return "### Sonuç\nSeçilen filtrelere göre kayıt bulunamadı."
 
     exact = filtered[filtered["adet"] == secilen_boy]
-    yil_min = int(filtered["yil"].min())
-    yil_max = int(filtered["yil"].max())
+    yil_min = int(scope_df["yil"].min())
+    yil_max = int(scope_df["yil"].max())
+
+    toplam_scope_satir = len(scope_df)
+    toplam_scope_adet = int(scope_df["adet"].sum())
+
+    kucuk_satir = len(filtered)
+    kucuk_adet = int(filtered["adet"].sum())
+
+    satir_yuzde = (kucuk_satir / toplam_scope_satir * 100) if toplam_scope_satir > 0 else 0
+    adet_yuzde = (kucuk_adet / toplam_scope_adet * 100) if toplam_scope_adet > 0 else 0
+
+    if adet_yuzde >= 60:
+        yorum = "⚠️ Küçük boy siparişler üretim yükünde çok baskın"
+    elif adet_yuzde >= 40:
+        yorum = "📌 Küçük boy siparişler üretimde belirgin yük oluşturuyor"
+    else:
+        yorum = "✅ Küçük boy siparişlerin yükü daha dengeli"
 
     lines = [
         "### Özet Bilgi",
@@ -339,6 +421,13 @@ def summary_markdown(filtered: pd.DataFrame, secilen_boy: int, mod: str) -> str:
         f"- Benzersiz profil: **{filtered['profil'].nunique():,}**",
         f"- Toplam adet: **{int(filtered['adet'].sum()):,}**",
         f"- Toplam kg: **{filtered['kg'].fillna(0).sum():,.2f}**",
+        "",
+        "### Genel Yük Değerlendirmesi",
+        f"- Kapsamdaki toplam sipariş satırı: **{toplam_scope_satir:,}**",
+        f"- {secilen_boy} boy ve altı satırlar, toplam listenin **%{satir_yuzde:.1f}**'ini oluşturuyor",
+        f"- Kapsamdaki toplam üretim adedi: **{toplam_scope_adet:,}**",
+        f"- {secilen_boy} boy ve altı ürünler, toplam üretimin **%{adet_yuzde:.1f}**'ini oluşturuyor",
+        f"- Yorum: **{yorum}**",
     ]
 
     if mod == "Seçilen boy ve altı":
@@ -350,21 +439,27 @@ def summary_markdown(filtered: pd.DataFrame, secilen_boy: int, mod: str) -> str:
             f"- Profil sayısı: **{exact['profil'].nunique():,}**",
             f"- Toplam adet: **{int(exact['adet'].sum()):,}**",
         ]
-    return "\n".join(lines)
 
+    return "\n".join(lines)
 
 
 def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_n_sec):
     df = load_excel(excel_file)
     selected_years = [int(y) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+
+    # Boy filtresi olmadan genel kapsam
+    scope_df = filter_scope_data(df, selected_years, profil_ara)
+
+    # Boy filtresi uygulanmış veri
     filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
 
-    md = summary_markdown(filtered, int(secilen_boy), mod)
+    md = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
     boy_df = build_boy_breakdown(filtered, int(secilen_boy))
     hedef_uretim = int(hedef_uretim)
     top_n_value = int(top_n_sec)
     profile_df = build_profile_summary(filtered, hedef_uretim)
     year_df = build_year_summary(filtered)
+    monthly_load_df = build_small_order_monthly(scope_df, int(secilen_boy))
     
     raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
@@ -378,9 +473,11 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         year_df,
         profile_df,
         raw.head(500),
+        monthly_load_df,
         boy_breakdown_chart(boy_df),
         top_profiles_chart(profile_df, top_n_value),
         monthly_chart(filtered),
+        small_order_load_chart(monthly_load_df, int(secilen_boy)),
         gr.update(choices=profile_list, value=profile_list[0] if profile_list else None)
     )
 
@@ -439,6 +536,7 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
         chart1 = gr.Plot(label="Boy dağılımı")
         chart2 = gr.Plot(label="Top profiller")
     chart3 = gr.Plot(label="Aylık trend")
+    chart4 = gr.Plot(label="Küçük Boy Sipariş Yükü")
 
     with gr.Tabs():
         with gr.Tab("Boy Kırılımı"):
@@ -455,6 +553,9 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
             detail_summary = gr.Markdown()
             detail_year = gr.Dataframe(label="Yıllık Detay")
             detail_boy = gr.Dataframe(label="Boy Dağılımı")
+            
+        with gr.Tab("Aylık Yük Analizi"):
+            monthly_load_table = gr.Dataframe(interactive=False, wrap=True)
         
         with gr.Tab("Ham Kayıt Önizleme"):
             raw_table = gr.Dataframe(interactive=False, wrap=True)
@@ -463,7 +564,19 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
     analyze_btn.click(
         fn=analyze,
         inputs=[excel_file, secilen_boy, mod, years, profil_ara, hedef_uretim, top_n_sec],
-        outputs=[summary, boy_table, year_table, profile_table, raw_table, chart1, chart2, chart3, profil_sec],
+        outputs=[
+            summary,
+            boy_table,
+            year_table,
+            profile_table,
+            raw_table,
+            monthly_load_table,
+            chart1,
+            chart2,
+            chart3,
+            chart4,
+            profil_sec
+        ],
     )
     
     profil_sec.change(
