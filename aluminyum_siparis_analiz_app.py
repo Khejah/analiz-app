@@ -404,12 +404,14 @@ def summary_markdown(
     satir_yuzde = (kucuk_satir / toplam_scope_satir * 100) if toplam_scope_satir > 0 else 0
     adet_yuzde = (kucuk_adet / toplam_scope_adet * 100) if toplam_scope_adet > 0 else 0
 
-    if adet_yuzde >= 60:
-        yorum = "⚠️ Küçük boy siparişler üretim yükünde çok baskın"
-    elif adet_yuzde >= 40:
-        yorum = "📌 Küçük boy siparişler üretimde belirgin yük oluşturuyor"
+    if satir_yuzde > 20 and adet_yuzde < 10:
+        yorum = "⚠️ Çok sayıda küçük sipariş var ancak üretime katkısı düşük (verimsizlik riski)"
+    elif satir_yuzde > 20:
+        yorum = "📌 Küçük siparişler operasyonel yük oluşturuyor"
+    elif adet_yuzde > 40:
+        yorum = "📊 Küçük siparişler üretimde önemli paya sahip"
     else:
-        yorum = "✅ Küçük boy siparişlerin yükü daha dengeli"
+        yorum = "✅ Sipariş dağılımı dengeli"
 
     lines = [
         "### Özet Bilgi",
