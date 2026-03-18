@@ -555,7 +555,31 @@ def top_profiles_chart(profile_summary: pd.DataFrame, top_n_value: int):
     )
     return fig
 
+def high_volume_chart(profile_summary: pd.DataFrame, top_n_value: int):
+    if profile_summary.empty:
+        return None
 
+    top_n = profile_summary.head(top_n_value).sort_values("Toplam Üretilen Boy")
+
+    grafik_yuksekligi = max(500, top_n_value * 35)
+
+    fig = px.bar(
+        top_n,
+        x="Toplam Üretilen Boy",
+        y="Profil Kodu",
+        orientation="h",
+        title=f"En çok üretime giren profiller (ilk {top_n_value})",
+        text="Toplam Üretilen Boy",
+        hover_data=["Toplam Sipariş Kalemi", "Farklı Sipariş Sayısı", "Yıllık Tüketim"],
+    )
+
+    fig.update_layout(
+        height=grafik_yuksekligi,
+        yaxis={"automargin": True}
+    )
+
+    return fig
+    
 def boy_breakdown_chart(boy_breakdown: pd.DataFrame):
     if boy_breakdown.empty:
         return None
@@ -598,8 +622,7 @@ def monthly_chart(filtered: pd.DataFrame):
 
     fig.update_layout(height=400)
     return fig
-
-
+    
 def build_small_order_monthly(scope_df: pd.DataFrame, secilen_boy: int) -> pd.DataFrame:
     if scope_df.empty:
         return pd.DataFrame(columns=[
