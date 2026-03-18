@@ -400,6 +400,8 @@ def summary_markdown(
 
     kucuk_satir = len(filtered)
     kucuk_adet = int(filtered["adet"].sum())
+    buyuk_satir = toplam_scope_satir - kucuk_satir
+    buyuk_adet = toplam_scope_adet - kucuk_adet
 
     satir_yuzde = (kucuk_satir / toplam_scope_satir * 100) if toplam_scope_satir > 0 else 0
     adet_yuzde = (kucuk_adet / toplam_scope_adet * 100) if toplam_scope_adet > 0 else 0
@@ -425,6 +427,17 @@ def summary_markdown(
         f"- Toplam kg: **{filtered['kg'].fillna(0).sum():,.2f}**",
         "",
         "### Genel Yük Değerlendirmesi",
+        "",
+        "### 📦 Sipariş Dağılımı",
+        f"- Toplam satır: **{toplam_scope_satir:,}**",
+        f"  - Küçük sipariş (≤{secilen_boy}): **{kucuk_satir:,}**",
+        f"  - Büyük sipariş (>{secilen_boy}): **{buyuk_satir:,}**",
+        
+        "",
+        "### 🔩 Üretim Dağılımı",
+        f"- Toplam üretim: **{toplam_scope_adet:,}**",
+        f"  - Küçük sipariş üretimi: **{kucuk_adet:,}**",
+        f"  - Büyük sipariş üretimi: **{buyuk_adet:,}**",
         f"- Kapsamdaki toplam sipariş satırı: **{toplam_scope_satir:,}**",
         f"- {secilen_boy} boy ve altı satırlar, toplam listenin **%{satir_yuzde:.1f}**'ini oluşturuyor",
         f"- Kapsamdaki toplam üretim adedi: **{toplam_scope_adet:,}**",
