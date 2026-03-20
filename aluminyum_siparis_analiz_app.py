@@ -1,5 +1,3 @@
-import math
-from pathlib import Path
 from typing import Iterable, Optional
 
 import gradio as gr
@@ -496,7 +494,81 @@ def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
     ]
     return "\n".join(lines)
 
+def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_uretim):
+    if scope_df.empty:
+        return "### Veri bulunamadı"
 
+    toplam_adet = int(scope_df["adet"].sum())
+    toplam_satir = len(scope_df)
+
+    kucuk = scope_df[scope_df["adet"] <= secilen_boy]
+    kucuk_adet = int(kucuk["adet"].sum())
+    kucuk_satir = len(kucuk)
+
+    kucuk_satir_yuzde = (kucuk_satir / toplam_satir * 100) if toplam_satir else 0
+    kucuk_adet_yuzde = (kucuk_adet / toplam_adet * 100) if toplam_adet else 0
+
+    # EN ÇOK ÜRETİM YAPILAN PROFİLLER
+    top_profiles = (
+        scope_df.groupby("profil")
+        .agg(toplam=("adet", "sum"))
+        .sort_values("toplam", ascending=False)
+        .head(15)
+    )
+
+    top_profiles_total = int(top_profiles["toplam"].sum())
+    top_profiles_yuzde = (top_profiles_total / toplam_adet * 100) if toplam_adet else 0
+
+    # MÜŞTERİ ANALİZİ
+    musteri = (
+        scope_df[scope_df["firma_adi"] != ""]
+        .groupby("firma_adi")
+        .agg(
+            siparis=("siparis_no", "count"),
+            toplam=("adet", "sum")
+        )
+        .sort_values("siparis", ascending=False)
+        .head(10)
+    )
+
+    # A SINIFI
+    a_class = abc_df[abc_df["ABC Sınıfı"] == "A"].head(10)
+
+    lines = [
+        "# 🚀 YÖNETİCİ ÖZETİ",
+        "",
+        "## 📊 Genel Durum",
+        f"- Toplam üretim: **{toplam_adet:,} boy**",
+        f"- Toplam sipariş: **{toplam_satir:,}**",
+        "",
+        "## ⚙️ Üretim Yükü",
+        f"- Küçük sipariş oranı: **%{kucuk_satir_yuzde:.1f}**",
+        f"- Üretime katkısı: **%{kucuk_adet_yuzde:.1f}**",
+        "",
+        "## 🏆 Kritik Profiller",
+        f"- İlk 15 profil üretimin **%{top_profiles_yuzde:.1f}**’ini oluşturuyor",
+    ]
+
+    for i, (idx, row) in enumerate(top_profiles.iterrows(), 1):
+        lines.append(f"{i}. {idx} → {int(row['toplam']):,} boy")
+
+    lines.append("")
+    lines.append("## 📦 A Sınıfı (Stok Önerilen)")
+    
+    for _, row in a_class.iterrows():
+        lines.append(
+            f"- {row['Profil Kodu']} → aylık: {int(row['Yıllık Tüketim']/12):,} / yıllık: {int(row['Yıllık Tüketim']):,}"
+        )
+
+    lines.append("")
+    lines.append("## 👤 Müşteri Yük Analizi")
+
+    for i, (idx, row) in enumerate(musteri.iterrows(), 1):
+        yuzde = (row["toplam"] / toplam_adet * 100) if toplam_adet else 0
+        lines.append(f"{i}. {idx} → {int(row['siparis'])} sipariş | %{yuzde:.1f} üretim")
+
+    return "\n".join(lines)
+    
 def abc_chart(abc_df: pd.DataFrame, top_n_value: int):
     if abc_df.empty:
         return None
@@ -781,7 +853,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
 
     profile_list = profile_df["Profil Kodu"].tolist() if not profile_df.empty else []
-
+    exec_summary = build_executive_summary(scope_df, filtered, abc_df, int(secilen_boy), hedef_uretim)
+    
     return (
         summary_small_text,
         boy_df,
@@ -801,7 +874,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         abc_md,
         abc_df,
         abc_chart(abc_df, top_n_value),
-        gr.update(choices=profile_list, value=profile_list[0] if profile_list else None)
+        gr.update(choices=profile_list, value=profile_list[0] if profile_list else None),
+        exec_summary
     )
 
 
@@ -908,6 +982,9 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
             abc_plot = gr.Plot(label="ABC Analizi")
             abc_table = gr.Dataframe(interactive=False, wrap=True)
 
+        with gr.Tab("Yönetici Özeti"):
+            exec_summary_md = gr.Markdown()
+            
     load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
 
     analyze_btn.click(
@@ -932,7 +1009,8 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
             abc_summary,
             abc_table,
             abc_plot,
-            profil_sec
+            profil_sec,
+            exec_summary_md
         ],
     )
 
