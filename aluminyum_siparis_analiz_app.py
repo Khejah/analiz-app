@@ -1431,7 +1431,7 @@ with gr.Blocks(
 ) as demo:
     gr.HTML("""
     <div style="display:flex; align-items:center; gap:12px;">
-        <img src="file/ic_asistal_a_fab.png" style="height:50px;">
+        <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
         <h1 style="margin:0;">Alüminyum Sipariş Boy Analizi</h1>
     </div>
     """)
