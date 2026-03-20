@@ -567,11 +567,16 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     # SİMÜLASYON
     mevcut_oran = kucuk_satir_yuzde
     hedef_oran = hedef_kucuk_oran
+    ideal_oran = max(hedef_oran - 3, 1)  # daha agresif senaryo
     
-    iyilesme_orani = max(mevcut_oran - hedef_oran, 0)
+    def hesapla(oran):
+        iyilesme = max(mevcut_oran - oran, 0)
+        kazanc_saat = (iyilesme / 100) * toplam_kalip_suresi_saat
+        kazanc_gun = kazanc_saat / 24
+        return iyilesme, kazanc_saat, kazanc_gun
     
-    kazanc_saat = (iyilesme_orani / 100 * toplam_kalip_suresi_saat) if toplam_kalip_suresi_saat > 0 else 0
-    kazanc_gun = kazanc_saat / 24 if kazanc_saat > 0 else 0
+    iy1, ks1, kg1 = hesapla(hedef_oran)
+    iy2, ks2, kg2 = hesapla(ideal_oran)
 
     lines = [
         "# 🚀 YÖNETİCİ ÖZETİ",
@@ -614,13 +619,21 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     "📎 Not: Kalıp değişim süresi ortalama **1 saat** olarak varsayılmıştır.",
     "",
     "## 🔮 Simülasyon (What-if Analizi)",
+
+    "",
+    "### 📊 Senaryo 1: Mevcut → Hedef",
     
-    f"- Mevcut küçük sipariş oranı: **%{mevcut_oran:.1f}**",
+    f"- Mevcut oran: **%{mevcut_oran:.1f}**",
     f"- Hedef oran: **%{hedef_oran:.1f}**",
+    f"- İyileşme: **%{iy1:.1f}**",
+    f"- Kazanç: **{ks1:.0f} saat (~{kg1:.1f} gün)**",
     
-    f"- Tahmini iyileşme: **%{iyilesme_orani:.1f}**",
+    "",
+    "### 🚀 Senaryo 2: Agresif Optimizasyon",
     
-    f"- Tahmini kazanım: **{kazanc_saat:.0f} saat (~{kazanc_gun:.1f} gün)**",
+    f"- Hedef oran: **%{ideal_oran:.1f}**",
+    f"- İyileşme: **%{iy2:.1f}**",
+    f"- Kazanç: **{ks2:.0f} saat (~{kg2:.1f} gün)**",
         "",
         "## 🏆 Kritik Profiller",
         f"- İlk 15 profil üretimin **%{top_profiles_yuzde:.1f}**’ini oluşturuyor",
@@ -1000,7 +1013,7 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
         secilen_boy = gr.Dropdown(label="Boy seç", choices=[str(i) for i in range(10, 0, -1)], value="10")
         mod = gr.Dropdown(label="Filtre modu", choices=["Seçilen boy", "Seçilen boy ve altı"], value="Seçilen boy ve altı")
         years = gr.CheckboxGroup(label="Yıllar", choices=[])
-        profil_ara = gr.Textbox(label="Profil ara (opsiyonel)", placeholder="Örn: LS60 veya TH62")
+        profil_ara = gr.Textbox(label="Profil ara (opsiyonel)", placeholder="Örn: TH62")
         hedef_uretim = gr.Dropdown(
             label="Yılda Kaç Kez Üretim Yapılsın?",
             choices=["4", "6", "12"],
