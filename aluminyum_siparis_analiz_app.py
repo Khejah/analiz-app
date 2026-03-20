@@ -3,6 +3,11 @@ from typing import Iterable, Optional
 import gradio as gr
 import pandas as pd
 import plotly.express as px
+import os
+import hashlib
+
+CACHE_DIR = "cache_data"
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 COLUMN_ALIASES = {
     "tarih": ["Tarih", "TARIH", "date"],
@@ -21,7 +26,12 @@ COLUMN_ALIASES = {
 def normalize_col(s: str) -> str:
     return str(s).strip().lower().replace("ı", "i").replace("ş", "s").replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c")
 
-
+def get_file_hash(file_path: str) -> str:
+    hasher = hashlib.md5()
+    with open(file_path, "rb") as f:
+        hasher.update(f.read())
+    return hasher.hexdigest()
+    
 NORMALIZED_ALIAS_MAP = {
     key: {normalize_col(x) for x in vals} for key, vals in COLUMN_ALIASES.items()
 }
@@ -53,6 +63,18 @@ def find_column(df: pd.DataFrame, logical_name: str) -> Optional[str]:
 
 
 def load_excel(excel_file) -> pd.DataFrame:
+    if hasattr(excel_file, "name") and os.path.exists(excel_file.name):
+        excel_path = excel_file.name
+    else:
+        raise ValueError("Dosya yolu alınamadı")
+
+    file_hash = get_file_hash(excel_path)
+    cache_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
+
+    # CACHE VARSA → direkt yükle
+    if os.path.exists(cache_path):
+        return pd.read_parquet(cache_path)
+        
     if excel_file is None:
         raise ValueError("Lütfen bir Excel dosyası yükleyin.")
 
@@ -132,6 +154,7 @@ def load_excel(excel_file) -> pd.DataFrame:
     work["adet"] = work["adet"].astype(int)
     work["yil"] = work["tarih"].dt.year.astype(int)
     work["ay"] = work["tarih"].dt.to_period("M").astype(str)
+    work.to_parquet(cache_path, index=False)
     return work
 
 
@@ -1397,7 +1420,7 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi") as demo:
         hedef_uretim = gr.Dropdown(
             label="Yılda Kaç Kez Üretim Yapılsın?",
             choices=["4", "6", "12"],
-            value="6"
+            value="4"
         )
         top_n_sec = gr.Dropdown(
             label="Grafiklerde kaç profil gösterilsin?",
@@ -1513,7 +1536,7 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi") as demo:
                 with gr.Tab("Stratejik Karar"):
                     profit_table = gr.Dataframe(interactive=False, wrap=True)    
                     
-                    load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
+    load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
 
     analyze_btn.click(
         fn=analyze,
