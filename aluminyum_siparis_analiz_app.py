@@ -69,23 +69,29 @@ def load_excel(excel_file) -> pd.DataFrame:
         raise ValueError("Dosya yolu alınamadı")
 
     file_hash = get_file_hash(excel_path)
-    cache_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
+    cache_path = os.path.join(CACHE_DIR, f"{file_hash}.pkl")
 
     # CACHE VARSA → direkt yükle
     if os.path.exists(cache_path):
-        return pd.read_parquet(cache_path)
+        try:
+            return pd.read_pickle(cache_path)
+        except Exception:
+            try:
+                os.remove(cache_path)
+            except Exception:
+                pass
         
     if excel_file is None:
         raise ValueError("Lütfen bir Excel dosyası yükleyin.")
 
     try:
-        xls = pd.ExcelFile(excel_file)
+        xls = pd.ExcelFile(excel_path)
     except Exception as e:
         raise ValueError(f"Excel okunamadı: {str(e)}")
 
     sheet_name = xls.sheet_names[0]
-    header_row = detect_header_row(excel_file, sheet_name=sheet_name)
-    df = pd.read_excel(excel_file, sheet_name=sheet_name, header=header_row)
+    header_row = detect_header_row(excel_path, sheet_name=sheet_name)
+    df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
     df = df.dropna(axis=1, how="all").dropna(how="all").copy()
 
     tarih_col = find_column(df, "tarih")
@@ -154,9 +160,12 @@ def load_excel(excel_file) -> pd.DataFrame:
     work["adet"] = work["adet"].astype(int)
     work["yil"] = work["tarih"].dt.year.astype(int)
     work["ay"] = work["tarih"].dt.to_period("M").astype(str)
-    work.to_parquet(cache_path, index=False)
+    try:
+        work.to_pickle(cache_path)
+    except Exception:
+        pass
+    
     return work
-
 
 def filter_data(df: pd.DataFrame, secilen_boy: int, mod: str, yillar: Iterable[int], profil_ara: str = "") -> pd.DataFrame:
     filtered = df.copy()
