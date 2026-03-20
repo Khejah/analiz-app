@@ -1441,84 +1441,85 @@ with gr.Blocks(
     </style>
     """)
 
-    with gr.Row():
+# ✅ HEADER (FULL WIDTH)
+gr.HTML("""
+<div style="display:flex; align-items:center; gap:16px;">
+    <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
+    
+    <div>
+        <h1 style="margin:0;">
+            🚀 Üretim Analiz & Karar Destek Platformu
+        </h1>
+        
+        <p style="margin:4px 0; font-size:14px; color:#666;">
+            Sipariş verilerinden operasyonel içgörü üretin, üretimi optimize edin ve stok kararlarını veriye dayalı yönetin.
+        </p>
+        
+        <p style="font-size:12px; color:#999; margin:4px 0;">
+            ✔ Küçük Sipariş Analizi • ✔ ABC Stok Modeli • ✔ Yönetici Dashboard
+        </p>
+    </div>
+</div>
+""")
 
-        # 🔵 SOL → HEADER
-        with gr.Column(scale=2):
-            gr.HTML("""
-            <div style="display:flex; align-items:center; gap:16px;">
-                <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
-                
-                <div>
-                    <h1 style="margin:0;">
-                        🚀 Üretim Analiz & Karar Destek Platformu
-                    </h1>
-                    
-                    <p style="margin:4px 0; font-size:14px; color:#666;">
-                        Sipariş verilerinden operasyonel içgörü üretin, üretimi optimize edin ve stok kararlarını veriye dayalı yönetin.
-                    </p>
-                    
-                    <p style="font-size:12px; color:#999; margin:4px 0;">
-                        ✔ Küçük Sipariş Analizi • ✔ ABC Stok Modeli • ✔ Yönetici Dashboard
-                    </p>
-                </div>
-            </div>
-            """)
+# 🔻 ALT KISIM (ASLINDA İSTEDİĞİN YAPI)
+with gr.Row():
 
-        # 🟡 SAĞ → TÜM KONTROL PANELİ (TEK YER)
-        with gr.Column(scale=1, elem_id="side-panel"):
+    # 🔵 SOL → BOŞ (content zaten aşağıda geliyor)
+    with gr.Column(scale=3):
+        pass
 
-            gr.Markdown("### 📊 Analizi Başlat")
+    # 🟡 SAĞ → PANEL
+    with gr.Column(scale=1, elem_id="side-panel"):
 
-            excel_file = gr.File(
-                label="Excel dosyası",
-                file_types=[".xlsx", ".xls"]
-            )
+        gr.Markdown("### 📊 Analizi Başlat")
 
-            secilen_boy = gr.Dropdown(
-                label="Boy seç",
-                choices=[str(i) for i in range(10, 0, -1)],
-                value="10"
-            )
+        excel_file = gr.File(
+            label="Excel dosyası",
+            file_types=[".xlsx", ".xls"]
+        )
 
-            mod = gr.Dropdown(
-                label="Filtre modu",
-                choices=["Seçilen boy", "Seçilen boy ve altı"],
-                value="Seçilen boy ve altı"
-            )
+        secilen_boy = gr.Dropdown(
+            label="Boy seç",
+            choices=[str(i) for i in range(10, 0, -1)],
+            value="10"
+        )
 
-            years = gr.CheckboxGroup(
-                label="Yıllar",
-                choices=[]
-            )
+        mod = gr.Dropdown(
+            label="Filtre modu",
+            choices=["Seçilen boy", "Seçilen boy ve altı"],
+            value="Seçilen boy ve altı"
+        )
 
-            profil_ara = gr.Textbox(
-                label="Profil ara (opsiyonel)",
-                placeholder="Örn: TH62-01"
-            )
+        years = gr.CheckboxGroup(label="Yıllar", choices=[])
 
-            hedef_uretim = gr.Dropdown(
-                label="Yılda Kaç Kez Üretim Yapılsın?",
-                choices=["4", "6", "12"],
-                value="4"
-            )
+        profil_ara = gr.Textbox(
+            label="Profil ara (opsiyonel)",
+            placeholder="Örn: TH62-01"
+        )
 
-            top_n_sec = gr.Dropdown(
-                label="Grafiklerde kaç profil gösterilsin?",
-                choices=["15", "50", "100"],
-                value="15"
-            )
+        hedef_uretim = gr.Dropdown(
+            label="Yılda Kaç Kez Üretim Yapılsın?",
+            choices=["4", "6", "12"],
+            value="4"
+        )
 
-            hedef_kucuk_oran = gr.Slider(
-                label="Simülasyon: Küçük sipariş oranı (%)",
-                minimum=1,
-                maximum=30,
-                value=10,
-                step=1
-            )
+        top_n_sec = gr.Dropdown(
+            label="Grafiklerde kaç profil gösterilsin?",
+            choices=["15", "50", "100"],
+            value="15"
+        )
 
-            load_btn = gr.Button("Yılları yükle")
-            analyze_btn = gr.Button("🚀 Analizi çalıştır", variant="primary")
+        hedef_kucuk_oran = gr.Slider(
+            label="Simülasyon: Küçük sipariş oranı (%)",
+            minimum=1,
+            maximum=30,
+            value=10,
+            step=1
+        )
+
+        load_btn = gr.Button("Yılları yükle")
+        analyze_btn = gr.Button("🚀 Analizi çalıştır", variant="primary")
             
     with gr.Tabs():
         with gr.Tab("En Az Üretime Giren Ürünlerin Listesi"):
