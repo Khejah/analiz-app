@@ -13,6 +13,9 @@ COLUMN_ALIASES = {
     "adet": ["Adet", "adet", "Boy", "boy_adedi"],
     "kg": ["Kg", "kg"],
     "firma": ["Firma Adi", "Firma", "firma_adi"],
+    "pres": ["Pres Adi", "Pres", "pres"],
+    "termin": ["Termin"],
+    "termin_hafta": ["Termin Hafta"],    
 }
 
 
@@ -68,6 +71,9 @@ def load_excel(excel_file) -> pd.DataFrame:
     kg_col = find_column(df, "kg")
     musteri_col = find_column(df, "musteri")
     firma_col = find_column(df, "firma")
+    pres_col = find_column(df, "pres")
+    termin_col = find_column(df, "termin")
+    termin_hafta_col = find_column(df, "termin_hafta")    
 
     missing = [
         name for name, col in {
@@ -101,7 +107,24 @@ def load_excel(excel_file) -> pd.DataFrame:
         work["kg"] = pd.to_numeric(df[kg_col], errors="coerce")
     else:
         work["kg"] = 0
-
+    # PRES
+    if pres_col:
+        work["pres"] = df[pres_col].astype(str).str.strip()
+    else:
+        work["pres"] = "Bilinmiyor"
+    
+    # TERMIN
+    if termin_col:
+        work["termin"] = pd.to_datetime(df[termin_col], errors="coerce", dayfirst=True)
+    else:
+        work["termin"] = pd.NaT
+    
+    # TERMIN HAFTA
+    if termin_hafta_col:
+        work["termin_hafta"] = df[termin_hafta_col]
+    else:
+        work["termin_hafta"] = None    
+        
     work = work.dropna(subset=["tarih", "profil", "siparis_no", "adet"]).copy()
     work = work[(work["adet"] >= 1) & (work["adet"] <= 100000)]
     work["adet"] = work["adet"].astype(int)
@@ -373,14 +396,34 @@ def build_dashboard_top_profiles(scope_df: pd.DataFrame, top_n: int = 15) -> pd.
     return prof
 
 
-def build_termin_dashboard(scope_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Termin kolonu veri dosyasında yoksa dashboard kırılmasın diye güvenli fallback.
-    İleride gerçek termin kolonu eklenince burada gerçek hesap yapılacak.
-    """
+def build_termin_dashboard(scope_df: pd.DataFrame):
+    if scope_df.empty or "termin" not in scope_df.columns:
+        return pd.DataFrame([
+            {"Metrik": "Termin Uyum Oranı", "Değer": "Termin verisi yok"}
+        ])
+
+    df = scope_df.copy()
+
+    df = df.dropna(subset=["termin", "tarih"])
+
+    if df.empty:
+        return pd.DataFrame([
+            {"Metrik": "Termin Uyum Oranı", "Değer": "Veri yok"}
+        ])
+
+    df["termin_fark"] = (df["termin"] - df["tarih"]).dt.days
+
+    toplam = len(df)
+    zamaninda = (df["termin_fark"] >= 0).sum()
+    geciken = (df["termin_fark"] < 0).sum()
+
+    uyum_orani = (zamaninda / toplam * 100) if toplam > 0 else 0
+
     return pd.DataFrame([
-        {"Metrik": "Termin Uyum Oranı", "Değer": "Termin verisi yok"},
-        {"Metrik": "Termin Notu", "Değer": "Excel içinde termin tarihi / teslim tarihi kolonu eklenmeli"},
+        {"Metrik": "Toplam İş", "Değer": f"{toplam:,}"},
+        {"Metrik": "Zamanında", "Değer": f"{zamaninda:,}"},
+        {"Metrik": "Geciken", "Değer": f"{geciken:,}"},
+        {"Metrik": "Termin Uyum Oranı", "Değer": f"%{uyum_orani:.2f}"},
     ])
     
 def build_high_volume_raw(scope_df: pd.DataFrame, min_boy: int) -> pd.DataFrame:
@@ -920,28 +963,29 @@ def dashboard_monthly_chart(monthly_df: pd.DataFrame):
     fig.update_layout(height=420)
     return fig
 
-
 def dashboard_pres_performance_chart(scope_df: pd.DataFrame):
-    """
-    Şu an veri modelinde pres kolonu normalize edilmediği için güvenli placeholder gösteriyoruz.
-    Pres kolonu eklenince gerçek grafik bağlanacak.
-    """
-    fig = go.Figure()
-    fig.add_annotation(
-        text="Pres performans grafiği için veri dosyasında 'Pres' kolonu gerekli",
-        x=0.5,
-        y=0.5,
-        xref="paper",
-        yref="paper",
-        showarrow=False,
-        font=dict(size=16)
-    )
-    fig.update_layout(
-        title="Pres Bazlı Performans",
-        height=420
-    )
-    return fig
+    if scope_df.empty or "pres" not in scope_df.columns:
+        return None
 
+    pres_df = scope_df.groupby("pres", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", "sum"),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+    )
+
+    pres_df = pres_df.sort_values("toplam_adet", ascending=False)
+
+    fig = px.bar(
+        pres_df,
+        x="pres",
+        y="toplam_adet",
+        title="Pres Bazlı Performans",
+        text="toplam_adet",
+        hover_data=["toplam_kg", "siparis_sayisi"],
+    )
+
+    fig.update_layout(height=420)
+    return fig
 
 def dashboard_top_profiles_chart(top_profiles_df: pd.DataFrame):
     if top_profiles_df.empty:
@@ -961,22 +1005,22 @@ def dashboard_top_profiles_chart(top_profiles_df: pd.DataFrame):
 
 
 def dashboard_termin_chart(termin_df: pd.DataFrame):
-    fig = go.Figure()
-    deger = termin_df.iloc[0]["Değer"] if not termin_df.empty else "Termin verisi yok"
+    if termin_df.empty or len(termin_df) < 3:
+        return None
 
-    fig.add_annotation(
-        text=f"Termin Uyum Oranı: {deger}",
-        x=0.5,
-        y=0.5,
-        xref="paper",
-        yref="paper",
-        showarrow=False,
-        font=dict(size=18)
+    try:
+        zamaninda = int(str(termin_df.iloc[1]["Değer"]).replace(",", ""))
+        geciken = int(str(termin_df.iloc[2]["Değer"]).replace(",", ""))
+    except:
+        return None
+
+    fig = px.pie(
+        names=["Zamanında", "Geciken"],
+        values=[zamaninda, geciken],
+        title="Termin Performansı",
     )
-    fig.update_layout(
-        title="Termin Uyum Oranı",
-        height=420
-    )
+
+    fig.update_layout(height=420)
     return fig
     
 def summary_markdown(
