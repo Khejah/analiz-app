@@ -3,7 +3,7 @@ from typing import Iterable, Optional
 import gradio as gr
 import pandas as pd
 import plotly.express as px
-
+import plotly.graph_objects as go
 
 COLUMN_ALIASES = {
     "tarih": ["Tarih", "TARIH", "date"],
@@ -318,7 +318,71 @@ def build_high_volume_year_summary(scope_df: pd.DataFrame, min_boy: int) -> pd.D
     year["toplam_kg"] = year["toplam_kg"].round(2)
     return year.sort_values("yil")
 
+def build_dashboard_kpis(scope_df: pd.DataFrame) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame(columns=["KPI", "Değer"])
 
+    toplam_satir = len(scope_df)
+    benzersiz_siparis = int(scope_df["siparis_no"].nunique())
+    benzersiz_profil = int(scope_df["profil"].nunique())
+    toplam_adet = int(scope_df["adet"].sum())
+    toplam_kg = float(scope_df["kg"].fillna(0).sum())
+
+    kpi_rows = [
+        {"KPI": "Toplam Sipariş Satırı", "Değer": f"{toplam_satir:,}"},
+        {"KPI": "Benzersiz Sipariş", "Değer": f"{benzersiz_siparis:,}"},
+        {"KPI": "Benzersiz Profil", "Değer": f"{benzersiz_profil:,}"},
+        {"KPI": "Toplam Üretilen Boy", "Değer": f"{toplam_adet:,}"},
+        {"KPI": "Toplam Kg", "Değer": f"{toplam_kg:,.2f}"},
+    ]
+    return pd.DataFrame(kpi_rows)
+
+
+def build_dashboard_monthly(scope_df: pd.DataFrame) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame(columns=["ay", "toplam_adet", "toplam_kg", "siparis_sayisi"])
+
+    monthly = scope_df.groupby("ay", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", "sum"),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+    ).sort_values("ay")
+
+    monthly["toplam_kg"] = monthly["toplam_kg"].round(2)
+    return monthly
+
+
+def build_dashboard_top_profiles(scope_df: pd.DataFrame, top_n: int = 15) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame(columns=["Profil Kodu", "Toplam Üretilen Boy", "Toplam Kg", "Sipariş Sayısı"])
+
+    prof = scope_df.groupby("profil", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", "sum"),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+    )
+
+    prof["toplam_kg"] = prof["toplam_kg"].round(2)
+
+    prof = prof.sort_values(
+        ["toplam_adet", "toplam_kg"],
+        ascending=[False, False]
+    ).head(top_n)
+
+    prof.columns = ["Profil Kodu", "Toplam Üretilen Boy", "Toplam Kg", "Sipariş Sayısı"]
+    return prof
+
+
+def build_termin_dashboard(scope_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Termin kolonu veri dosyasında yoksa dashboard kırılmasın diye güvenli fallback.
+    İleride gerçek termin kolonu eklenince burada gerçek hesap yapılacak.
+    """
+    return pd.DataFrame([
+        {"Metrik": "Termin Uyum Oranı", "Değer": "Termin verisi yok"},
+        {"Metrik": "Termin Notu", "Değer": "Excel içinde termin tarihi / teslim tarihi kolonu eklenmeli"},
+    ])
+    
 def build_high_volume_raw(scope_df: pd.DataFrame, min_boy: int) -> pd.DataFrame:
     filtered = scope_df[scope_df["adet"] >= min_boy].copy()
 
@@ -841,7 +905,80 @@ def small_order_load_chart(monthly_load: pd.DataFrame, secilen_boy: int):
     fig.update_layout(height=400)
     return fig
 
+def dashboard_monthly_chart(monthly_df: pd.DataFrame):
+    if monthly_df.empty:
+        return None
 
+    fig = px.line(
+        monthly_df,
+        x="ay",
+        y="toplam_adet",
+        markers=True,
+        title="Günlük / Aylık Üretim Grafiği (Aylık Toplam Boy)",
+        hover_data=["toplam_kg", "siparis_sayisi"],
+    )
+    fig.update_layout(height=420)
+    return fig
+
+
+def dashboard_pres_performance_chart(scope_df: pd.DataFrame):
+    """
+    Şu an veri modelinde pres kolonu normalize edilmediği için güvenli placeholder gösteriyoruz.
+    Pres kolonu eklenince gerçek grafik bağlanacak.
+    """
+    fig = go.Figure()
+    fig.add_annotation(
+        text="Pres performans grafiği için veri dosyasında 'Pres' kolonu gerekli",
+        x=0.5,
+        y=0.5,
+        xref="paper",
+        yref="paper",
+        showarrow=False,
+        font=dict(size=16)
+    )
+    fig.update_layout(
+        title="Pres Bazlı Performans",
+        height=420
+    )
+    return fig
+
+
+def dashboard_top_profiles_chart(top_profiles_df: pd.DataFrame):
+    if top_profiles_df.empty:
+        return None
+
+    fig = px.bar(
+        top_profiles_df.sort_values("Toplam Üretilen Boy"),
+        x="Toplam Üretilen Boy",
+        y="Profil Kodu",
+        orientation="h",
+        title="En Çok Üretilen Profil",
+        text="Toplam Üretilen Boy",
+        hover_data=["Toplam Kg", "Sipariş Sayısı"],
+    )
+    fig.update_layout(height=420, yaxis={"automargin": True})
+    return fig
+
+
+def dashboard_termin_chart(termin_df: pd.DataFrame):
+    fig = go.Figure()
+    deger = termin_df.iloc[0]["Değer"] if not termin_df.empty else "Termin verisi yok"
+
+    fig.add_annotation(
+        text=f"Termin Uyum Oranı: {deger}",
+        x=0.5,
+        y=0.5,
+        xref="paper",
+        yref="paper",
+        showarrow=False,
+        font=dict(size=18)
+    )
+    fig.update_layout(
+        title="Termin Uyum Oranı",
+        height=420
+    )
+    return fig
+    
 def summary_markdown(
     filtered: pd.DataFrame,
     scope_df: pd.DataFrame,
@@ -940,6 +1077,10 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
 
     abc_df = build_abc_analysis(scope_df, hedef_uretim)
     abc_md = abc_summary_markdown(abc_df)
+    dashboard_kpi_df = build_dashboard_kpis(scope_df)
+    dashboard_monthly_df = build_dashboard_monthly(scope_df)
+    dashboard_top_profiles_df = build_dashboard_top_profiles(scope_df, top_n=15)
+    dashboard_termin_df = build_termin_dashboard(scope_df)    
 
     raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
@@ -975,7 +1116,15 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         abc_df,
         abc_chart(abc_df, top_n_value),
         gr.update(choices=profile_list, value=profile_list[0] if profile_list else None),
-        exec_summary
+        exec_summary,
+        dashboard_kpi_df,
+        dashboard_monthly_df,
+        dashboard_top_profiles_df,
+        dashboard_termin_df,
+        dashboard_monthly_chart(dashboard_monthly_df),
+        dashboard_pres_performance_chart(scope_df),
+        dashboard_top_profiles_chart(dashboard_top_profiles_df),
+        dashboard_termin_chart(dashboard_termin_df)
     )
 
 
@@ -1092,7 +1241,33 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
 
         with gr.Tab("Yönetici Özeti"):
             exec_summary_md = gr.Markdown()
-            
+        with gr.Tab("Yönetim Dashboard"):
+            gr.Markdown("## 📊 Yönetim Dashboard")
+
+            dashboard_kpi_table = gr.Dataframe(
+                label="KPI Özeti",
+                interactive=False,
+                wrap=True
+            )
+
+            with gr.Row():
+                dashboard_chart_monthly = gr.Plot(label="Günlük / Aylık Üretim")
+                dashboard_chart_pres = gr.Plot(label="Pres Bazlı Performans")
+
+            with gr.Row():
+                dashboard_chart_profiles = gr.Plot(label="En Çok Üretilen Profil")
+                dashboard_chart_termin = gr.Plot(label="Termin Uyum Oranı")
+
+            with gr.Tabs():
+                with gr.Tab("Aylık Dashboard Verisi"):
+                    dashboard_monthly_table = gr.Dataframe(interactive=False, wrap=True)
+
+                with gr.Tab("Top Profil Listesi"):
+                    dashboard_profiles_table = gr.Dataframe(interactive=False, wrap=True)
+
+                with gr.Tab("Termin Özeti"):
+                    dashboard_termin_table = gr.Dataframe(interactive=False, wrap=True)
+                    
     load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
 
     analyze_btn.click(
@@ -1118,7 +1293,16 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
             abc_table,
             abc_plot,
             profil_sec,
-            exec_summary_md
+            exec_summary_md,
+            dashboard_kpi_table,
+            dashboard_monthly_table,
+            dashboard_profiles_table,
+            dashboard_termin_table,
+            dashboard_chart_monthly,
+            dashboard_chart_pres,
+            dashboard_chart_profiles,
+            dashboard_chart_termin
+            
         ],
     )
 
