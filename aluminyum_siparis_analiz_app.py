@@ -81,7 +81,9 @@ def load_excel(excel_file) -> pd.DataFrame:
     if os.path.exists(cache_path):
         try:
             cached = pd.read_pickle(cache_path)
-            if "adet" in cached.columns:
+            required_cols = {"tarih", "profil", "siparis_no", "adet"}
+
+            if required_cols.issubset(set(cached.columns)):
                 return cached
         except Exception:
             pass
@@ -90,10 +92,6 @@ def load_excel(excel_file) -> pd.DataFrame:
             os.remove(cache_path)
         except Exception:
             pass
-        
-    if excel_file is None:
-        raise ValueError("Lütfen bir Excel dosyası yükleyin.")
-
     try:
         xls = pd.ExcelFile(excel_path)
     except Exception as e:
@@ -161,7 +159,7 @@ def load_excel(excel_file) -> pd.DataFrame:
     
     # TERMIN HAFTA
     if termin_hafta_col:
-        work["termin_hafta"] = df[termin_hafta_col]
+        work["termin_hafta"] = pd.to_numeric(df[termin_hafta_col], errors="coerce")
     else:
         work["termin_hafta"] = None    
         
@@ -926,8 +924,8 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
         f"- İlk 15 profil üretimin **%{top_profiles_yuzde:.1f}**’ini oluşturuyor",
     ]
 
-    for i, (idx, row) in enumerate(top_profiles.iterrows(), 1):
-        lines.append(f"{i}. {idx} → {int(row['toplam']):,} boy")
+    for i, row in enumerate(top_profiles.reset_index().itertuples(), 1):
+        lines.append(f"{i}. {row.profil} → {int(row.toplam):,} boy")
 
     lines.append("")
     lines.append("## 📦 A Sınıfı (Stok Önerilen)")
@@ -940,11 +938,11 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     lines.append("")
     lines.append("## 👤 Müşteri Yük Analizi")
 
-    for i, (idx, row) in enumerate(musteri.iterrows(), 1):
-        yuzde = (row["toplam"] / toplam_adet * 100) if toplam_adet else 0
+    for i, row in enumerate(musteri.reset_index().itertuples(), 1):
+        yuzde = (row.toplam / toplam_adet * 100) if toplam_adet else 0
         lines.append(
-            f"{i}. {idx} → {int(row['siparis'])} sipariş | "
-            f"{int(row['toplam'])} boy | %{yuzde:.1f} üretim"
+            f"{i}. {row.musteri_siparis_no} → {int(row.siparis)} sipariş | "
+            f"{int(row.toplam)} boy | %{yuzde:.1f} üretim"
         )
 
     return "\n".join(lines)
@@ -1385,7 +1383,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         abc_md,
         abc_df,
         abc_chart(abc_df, top_n_value),
-        gr.update(choices=profile_list, value=profile_list[0] if profile_list else None),
+        gr.update(choices=profile_list, value=profile_list[0] if profile_list else ""),
         exec_summary,
         dashboard_kpi_df,
         dashboard_monthly_df,
@@ -1441,184 +1439,175 @@ with gr.Blocks(
     </style>
     """)
 
-# ✅ HEADER (FULL WIDTH)
-gr.HTML("""
-<div style="display:flex; align-items:center; gap:16px;">
-    <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
-    
-    <div>
-        <h1 style="margin:0;">
-            🚀 Üretim Analiz & Karar Destek Platformu
-        </h1>
+    # ✅ HEADER
+    gr.HTML("""
+    <div style="display:flex; align-items:center; gap:16px;">
+        <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
         
-        <p style="margin:4px 0; font-size:14px; color:#666;">
-            Sipariş verilerinden operasyonel içgörü üretin, üretimi optimize edin ve stok kararlarını veriye dayalı yönetin.
-        </p>
-        
-        <p style="font-size:12px; color:#999; margin:4px 0;">
-            ✔ Küçük Sipariş Analizi • ✔ ABC Stok Modeli • ✔ Yönetici Dashboard
-        </p>
-    </div>
-</div>
-""")
-
-# 🔻 ALT KISIM (ASLINDA İSTEDİĞİN YAPI)
-with gr.Row():
-
-    # 🔵 SOL → BOŞ (content zaten aşağıda geliyor)
-    with gr.Column(scale=3):
-        pass
-
-    # 🟡 SAĞ → PANEL
-    with gr.Column(scale=1, elem_id="side-panel"):
-
-        gr.Markdown("### 📊 Analizi Başlat")
-
-        excel_file = gr.File(
-            label="Excel dosyası",
-            file_types=[".xlsx", ".xls"]
-        )
-
-        secilen_boy = gr.Dropdown(
-            label="Boy seç",
-            choices=[str(i) for i in range(10, 0, -1)],
-            value="10"
-        )
-
-        mod = gr.Dropdown(
-            label="Filtre modu",
-            choices=["Seçilen boy", "Seçilen boy ve altı"],
-            value="Seçilen boy ve altı"
-        )
-
-        years = gr.CheckboxGroup(label="Yıllar", choices=[])
-
-        profil_ara = gr.Textbox(
-            label="Profil ara (opsiyonel)",
-            placeholder="Örn: TH62-01"
-        )
-
-        hedef_uretim = gr.Dropdown(
-            label="Yılda Kaç Kez Üretim Yapılsın?",
-            choices=["4", "6", "12"],
-            value="4"
-        )
-
-        top_n_sec = gr.Dropdown(
-            label="Grafiklerde kaç profil gösterilsin?",
-            choices=["15", "50", "100"],
-            value="15"
-        )
-
-        hedef_kucuk_oran = gr.Slider(
-            label="Simülasyon: Küçük sipariş oranı (%)",
-            minimum=1,
-            maximum=30,
-            value=10,
-            step=1
-        )
-
-        load_btn = gr.Button("Yılları yükle")
-        analyze_btn = gr.Button("🚀 Analizi çalıştır", variant="primary")
+        <div>
+            <h1 style="margin:0;">
+                🚀 Üretim Analiz & Karar Destek Platformu
+            </h1>
             
-    with gr.Tabs():
-        with gr.Tab("En Az Üretime Giren Ürünlerin Listesi"):
-            summary_small = gr.Markdown()
+            <p style="margin:4px 0; font-size:14px; color:#666;">
+                Sipariş verilerinden operasyonel içgörü üretin, üretimi optimize edin ve stok kararlarını veriye dayalı yönetin.
+            </p>
+            
+            <p style="font-size:12px; color:#999; margin:4px 0;">
+                ✔ Küçük Sipariş Analizi • ✔ ABC Stok Modeli • ✔ Yönetici Dashboard
+            </p>
+        </div>
+    </div>
+    """)
 
-            with gr.Row():
-                chart1 = gr.Plot(label="Boy dağılımı")
-                chart2 = gr.Plot(label="Top profiller")
+    # 🔻 ANA LAYOUT (DÜZELTİLMİŞ)
+    with gr.Row():
 
-            chart3 = gr.Plot(label="Aylık trend")
-            chart4 = gr.Plot(label="Küçük Boy Sipariş Yükü")
-
-            with gr.Tabs():
-                with gr.Tab("Boy Kırılımı"):
-                    boy_table = gr.Dataframe(interactive=False, wrap=True)
-
-                with gr.Tab("Yıl Özeti"):
-                    year_table = gr.Dataframe(interactive=False, wrap=True)
-
-                with gr.Tab("Profil Özeti"):
-                    profile_table = gr.Dataframe(interactive=False, wrap=True)
-
-                    gr.Markdown("## 🔍 Profil Detay")
-                    profil_sec = gr.Dropdown(label="Profil seç", choices=[])
-
-                    detail_summary = gr.Markdown()
-                    detail_year = gr.Dataframe(label="Yıllık Detay")
-                    detail_boy = gr.Dataframe(label="Boy Dağılımı")
-
-                with gr.Tab("Aylık Yük Analizi"):
-                    monthly_load_table = gr.Dataframe(interactive=False, wrap=True)
-
-                with gr.Tab("Ham Kayıt Önizleme"):
-                    raw_table = gr.Dataframe(interactive=False, wrap=True)
-
-        with gr.Tab("En Çok Üretime Giren Ürünlerin Listesi"):
-            high_summary = gr.Markdown()
-            high_chart = gr.Plot(label="En Çok Üretime Giren Profiller")
+        # ✅ SOL → ANA CONTENT
+        with gr.Column(scale=3):
 
             with gr.Tabs():
-                with gr.Tab("Yıl Özeti"):
-                    high_year_table = gr.Dataframe(interactive=False, wrap=True)
 
-                with gr.Tab("Profil Özeti"):
-                    high_profile_table = gr.Dataframe(interactive=False, wrap=True)
+                with gr.Tab("En Az Üretime Giren Ürünlerin Listesi"):
+                    summary_small = gr.Markdown()
 
-                with gr.Tab("Ham Kayıt Önizleme"):
-                    high_raw_table = gr.Dataframe(interactive=False, wrap=True)
+                    with gr.Row():
+                        chart1 = gr.Plot(label="Boy dağılımı")
+                        chart2 = gr.Plot(label="Top profiller")
 
-        with gr.Tab("ABC Analizi ve Stok Önerisi"):
-            abc_summary = gr.Markdown()
-            abc_plot = gr.Plot(label="ABC Analizi")
-            abc_table = gr.Dataframe(interactive=False, wrap=True)
+                    chart3 = gr.Plot(label="Aylık trend")
+                    chart4 = gr.Plot(label="Küçük Boy Sipariş Yükü")
 
-        with gr.Tab("Yönetici Özeti"):
-            exec_summary_md = gr.Markdown()
-        with gr.Tab("Yönetim Dashboard"):
-            gr.Markdown("## 📊 Yönetim Dashboard")
+                    with gr.Tabs():
+                        with gr.Tab("Boy Kırılımı"):
+                            boy_table = gr.Dataframe(interactive=False, wrap=True)
 
-            dashboard_kpi_table = gr.Dataframe(
-                label="KPI Özeti",
-                interactive=False,
-                wrap=True
+                        with gr.Tab("Yıl Özeti"):
+                            year_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Profil Özeti"):
+                            profile_table = gr.Dataframe(interactive=False, wrap=True)
+
+                            gr.Markdown("## 🔍 Profil Detay")
+                            profil_sec = gr.Dropdown(label="Profil seç", choices=[])
+
+                            detail_summary = gr.Markdown()
+                            detail_year = gr.Dataframe(label="Yıllık Detay")
+                            detail_boy = gr.Dataframe(label="Boy Dağılımı")
+
+                        with gr.Tab("Aylık Yük Analizi"):
+                            monthly_load_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Ham Kayıt Önizleme"):
+                            raw_table = gr.Dataframe(interactive=False, wrap=True)
+
+                with gr.Tab("En Çok Üretime Giren Ürünlerin Listesi"):
+                    high_summary = gr.Markdown()
+                    high_chart = gr.Plot(label="En Çok Üretime Giren Profiller")
+
+                    with gr.Tabs():
+                        with gr.Tab("Yıl Özeti"):
+                            high_year_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Profil Özeti"):
+                            high_profile_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Ham Kayıt Önizleme"):
+                            high_raw_table = gr.Dataframe(interactive=False, wrap=True)
+
+                with gr.Tab("ABC Analizi ve Stok Önerisi"):
+                    abc_summary = gr.Markdown()
+                    abc_plot = gr.Plot(label="ABC Analizi")
+                    abc_table = gr.Dataframe(interactive=False, wrap=True)
+
+                with gr.Tab("Yönetici Özeti"):
+                    exec_summary_md = gr.Markdown()
+
+                with gr.Tab("Yönetim Dashboard"):
+                    gr.Markdown("## 📊 Yönetim Dashboard")
+
+                    dashboard_kpi_table = gr.Dataframe(label="KPI Özeti", interactive=False, wrap=True)
+
+                    with gr.Row():
+                        dashboard_chart_monthly = gr.Plot(label="Günlük / Aylık Üretim")
+                        dashboard_chart_pres = gr.Plot(label="Pres Bazlı Performans")
+
+                    with gr.Row():
+                        dashboard_chart_profiles = gr.Plot(label="En Çok Üretilen Profil")
+                        dashboard_chart_termin = gr.Plot(label="Termin Uyum Oranı")
+
+                    with gr.Tabs():
+                        with gr.Tab("Aylık Dashboard Verisi"):
+                            dashboard_monthly_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Top Profil Listesi"):
+                            dashboard_profiles_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Pres Verimlilik"):
+                            dashboard_pres_eff_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Termin Özeti"):
+                            dashboard_termin_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Sezonsallık"):
+                            dashboard_seasonality_table = gr.Dataframe(interactive=False, wrap=True)
+                            dashboard_seasonality_chart = gr.Plot(label="Sezonsallık Grafiği")
+
+                        with gr.Tab("Yıl-Ay Kırılımı"):
+                            dashboard_year_month_pivot_table = gr.Dataframe(interactive=False, wrap=True)
+                            dashboard_moving_avg_chart = gr.Plot(label="Hareketli Ortalama")
+
+                        with gr.Tab("Stratejik Karar"):
+                            profit_table = gr.Dataframe(interactive=False, wrap=True)
+
+        # ✅ SAĞ → STICKY PANEL
+        with gr.Column(scale=1, elem_id="side-panel"):
+
+            gr.Markdown("### 📊 Analizi Başlat")
+
+            excel_file = gr.File(label="Excel dosyası", file_types=[".xlsx", ".xls"])
+
+            secilen_boy = gr.Dropdown(
+                label="Boy seç",
+                choices=[str(i) for i in range(10, 0, -1)],
+                value="10"
             )
 
-            with gr.Row():
-                dashboard_chart_monthly = gr.Plot(label="Günlük / Aylık Üretim")
-                dashboard_chart_pres = gr.Plot(label="Pres Bazlı Performans")
+            mod = gr.Dropdown(
+                label="Filtre modu",
+                choices=["Seçilen boy", "Seçilen boy ve altı"],
+                value="Seçilen boy ve altı"
+            )
 
-            with gr.Row():
-                dashboard_chart_profiles = gr.Plot(label="En Çok Üretilen Profil")
-                dashboard_chart_termin = gr.Plot(label="Termin Uyum Oranı")
+            years = gr.CheckboxGroup(label="Yıllar", choices=[])
 
-            with gr.Tabs():
-                with gr.Tab("Aylık Dashboard Verisi"):
-                    dashboard_monthly_table = gr.Dataframe(interactive=False, wrap=True)
+            profil_ara = gr.Textbox(label="Profil ara", placeholder="Örn: TH62-01")
 
-                with gr.Tab("Top Profil Listesi"):
-                    dashboard_profiles_table = gr.Dataframe(interactive=False, wrap=True)
-                    
-                with gr.Tab("Pres Verimlilik"):
-                    dashboard_pres_eff_table = gr.Dataframe(interactive=False, wrap=True)
-                    
-                with gr.Tab("Termin Özeti"):
-                    dashboard_termin_table = gr.Dataframe(interactive=False, wrap=True)
-                    
-                with gr.Tab("Sezonsallık"):
-                    dashboard_seasonality_table = gr.Dataframe(interactive=False, wrap=True)
-                    dashboard_seasonality_chart = gr.Plot(label="Sezonsallık Grafiği")
-                
-                with gr.Tab("Yıl-Ay Kırılımı"):
-                    dashboard_year_month_pivot_table = gr.Dataframe(interactive=False, wrap=True)
-                    dashboard_moving_avg_chart = gr.Plot(label="Hareketli Ortalama")
-                
-                with gr.Tab("Stratejik Karar"):
-                    profit_table = gr.Dataframe(interactive=False, wrap=True)    
-                    
+            hedef_uretim = gr.Dropdown(
+                label="Yılda Kaç Kez Üretim?",
+                choices=["4", "6", "12"],
+                value="4"
+            )
+
+            top_n_sec = gr.Dropdown(
+                label="Grafiklerde kaç profil?",
+                choices=["15", "50", "100"],
+                value="15"
+            )
+
+            hedef_kucuk_oran = gr.Slider(
+                label="Küçük sipariş oranı (%)",
+                minimum=1,
+                maximum=30,
+                value=10,
+                step=1
+            )
+
+            load_btn = gr.Button("Yılları yükle")
+            analyze_btn = gr.Button("🚀 Analizi çalıştır", variant="primary")
+
     load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
-
+    
     analyze_btn.click(
         fn=analyze,
         inputs=[excel_file, secilen_boy, mod, years, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran],
