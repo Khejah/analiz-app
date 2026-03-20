@@ -507,6 +507,26 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
 
     kucuk_satir_yuzde = (kucuk_satir / toplam_satir * 100) if toplam_satir else 0
     kucuk_adet_yuzde = (kucuk_adet / toplam_adet * 100) if toplam_adet else 0
+    verimsizlik_skoru = kucuk_satir_yuzde - kucuk_adet_yuzde
+    # KALIP DEĞİŞİM ANALİZİ
+    farkli_profil_sayisi = kucuk["profil"].nunique()
+    
+    # varsayım: her profil = 1 kalıp değişimi
+    kalip_degisim_sayisi = kucuk.groupby("siparis_no")["profil"].nunique().sum()
+    
+    # ortalama 1 saat
+    toplam_kalip_suresi_saat = kalip_degisim_sayisi * 1
+    toplam_kalip_suresi_gun = toplam_kalip_suresi_saat / 24
+    # AKILLI YORUM MOTORU
+    
+    if verimsizlik_skoru > 15:
+        yorum_text = "❌ Sistem ciddi verimsizlik üretiyor (çok sipariş, düşük üretim)"
+    elif verimsizlik_skoru > 8:
+        yorum_text = "⚠️ Operasyonel verimsizlik riski var"
+    elif verimsizlik_skoru > 3:
+        yorum_text = "ℹ️ Dikkat edilmeli"
+    else:
+        yorum_text = "✅ Sistem dengeli çalışıyor"
 
     # EN ÇOK ÜRETİM YAPILAN PROFİLLER
     top_profiles = (
@@ -553,8 +573,38 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
         f"- Toplam sipariş: **{toplam_satir:,}**",
         "",
         "## ⚙️ Üretim Yükü",
-        f"- Küçük sipariş oranı: **%{kucuk_satir_yuzde:.1f}**",
-        f"- Üretime katkısı: **%{kucuk_adet_yuzde:.1f}**",
+
+    f"- Küçük sipariş oranı: **%{kucuk_satir_yuzde:.1f}**",
+    f"- Üretime katkısı: **%{kucuk_adet_yuzde:.1f}**",
+    
+    "",
+    "### 🔩 Operasyonel Etki",
+    
+    f"- Küçük siparişlerde farklı profil sayısı: **{farkli_profil_sayisi}**",
+    f"- Tahmini kalıp değişim sayısı: **{kalip_degisim_sayisi}**",
+    
+    f"- Toplam kalıp değişim süresi: **{toplam_kalip_suresi_saat:,} saat** (~{toplam_kalip_suresi_gun:.1f} gün)",
+    
+    "",
+    "### 📌 Akıllı Değerlendirme",
+
+    yorum_text,
+    
+    "",
+    f"- {secilen_boy} boy ve altı siparişler toplam siparişlerin **%{kucuk_satir_yuzde:.1f}**’ini oluşturuyor.",
+    f"- Bu siparişlerin üretime katkısı sadece **%{kucuk_adet_yuzde:.1f}** seviyesinde.",
+    
+    f"- Toplam **{kalip_degisim_sayisi}** farklı profil nedeniyle yaklaşık **{toplam_kalip_suresi_saat:,} saat** kalıp değişim süresi oluşmuştur.",
+    
+    "",
+    "### 🎯 Yorum Detayı",
+    
+    "- Sipariş sayısı yüksek ancak üretim katkısı düşükse → verimsizlik oluşur",
+    "- Sipariş oranı düşükse → sistem dengeli çalışır",
+    "- Kritik eşik: %20 üzeri sipariş yoğunluğu",
+    
+    "",
+    "📎 Not: Kalıp değişim süresi ortalama **1 saat** olarak varsayılmıştır.",
         "",
         "## 🏆 Kritik Profiller",
         f"- İlk 15 profil üretimin **%{top_profiles_yuzde:.1f}**’ini oluşturuyor",
