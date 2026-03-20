@@ -494,7 +494,7 @@ def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
     ]
     return "\n".join(lines)
 
-def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_uretim):
+def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_uretim, hedef_kucuk_oran):
     if scope_df.empty:
         return "### Veri bulunamadı"
 
@@ -564,6 +564,14 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
 
     # A SINIFI
     a_class = abc_df[abc_df["ABC Sınıfı"] == "A"].head(10)
+    # SİMÜLASYON
+    mevcut_oran = kucuk_satir_yuzde
+    hedef_oran = hedef_kucuk_oran
+    
+    iyilesme_orani = max(mevcut_oran - hedef_oran, 0)
+    
+    kazanc_saat = (iyilesme_orani / 100 * toplam_kalip_suresi_saat) if toplam_kalip_suresi_saat > 0 else 0
+    kazanc_gun = kazanc_saat / 24 if kazanc_saat > 0 else 0
 
     lines = [
         "# 🚀 YÖNETİCİ ÖZETİ",
@@ -589,7 +597,6 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     "### 📌 Akıllı Değerlendirme",
 
     yorum_text,
-    
     "",
     f"- {secilen_boy} boy ve altı siparişler toplam siparişlerin **%{kucuk_satir_yuzde:.1f}**’ini oluşturuyor.",
     f"- Bu siparişlerin üretime katkısı sadece **%{kucuk_adet_yuzde:.1f}** seviyesinde.",
@@ -605,6 +612,15 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     
     "",
     "📎 Not: Kalıp değişim süresi ortalama **1 saat** olarak varsayılmıştır.",
+    "",
+    "## 🔮 Simülasyon (What-if Analizi)",
+    
+    f"- Mevcut küçük sipariş oranı: **%{mevcut_oran:.1f}**",
+    f"- Hedef oran: **%{hedef_oran:.1f}**",
+    
+    f"- Tahmini iyileşme: **%{iyilesme_orani:.1f}**",
+    
+    f"- Tahmini kazanım: **{kazanc_saat:.0f} saat (~{kazanc_gun:.1f} gün)**",
         "",
         "## 🏆 Kritik Profiller",
         f"- İlk 15 profil üretimin **%{top_profiles_yuzde:.1f}**’ini oluşturuyor",
@@ -888,7 +904,7 @@ def summary_markdown(
     return "\n".join(lines)
 
 
-def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_n_sec):
+def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran):
     df = load_excel(excel_file)
     selected_years = [int(y) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
 
@@ -917,7 +933,14 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
 
     profile_list = profile_df["Profil Kodu"].tolist() if not profile_df.empty else []
-    exec_summary = build_executive_summary(scope_df, filtered, abc_df, int(secilen_boy), hedef_uretim)
+    exec_summary = build_executive_summary(
+        scope_df,
+        filtered,
+        abc_df,
+        int(secilen_boy),
+        hedef_uretim,
+        hedef_kucuk_oran
+    )
     
     return (
         summary_small_text,
@@ -988,6 +1011,14 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
             choices=["15", "50", "100"],
             value="15"
         )
+        
+        hedef_kucuk_oran = gr.Slider(
+            label="Simülasyon: Küçük sipariş oranı (%)",
+            minimum=1,
+            maximum=30,
+            value=10,
+            step=1
+        )
 
     with gr.Row():
         load_btn = gr.Button("Yılları yükle")
@@ -1053,7 +1084,7 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
 
     analyze_btn.click(
         fn=analyze,
-        inputs=[excel_file, secilen_boy, mod, years, profil_ara, hedef_uretim, top_n_sec],
+        inputs=[excel_file, secilen_boy, mod, years, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran],
         outputs=[
             summary_small,
             boy_table,
