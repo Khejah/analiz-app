@@ -519,15 +519,26 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     top_profiles_total = int(top_profiles["toplam"].sum())
     top_profiles_yuzde = (top_profiles_total / toplam_adet * 100) if toplam_adet else 0
 
-    # MÜŞTERİ ANALİZİ
+    # MÜŞTERİ ANALİZİ (musteri_siparis_no bazlı)
+    musteri_df = scope_df.copy()
+    
+    musteri_df["musteri_siparis_no"] = musteri_df["musteri_siparis_no"].astype(str).str.strip()
+    
+    # boş ve hatalı kayıtları temizle
+    musteri_df = musteri_df[
+        (musteri_df["musteri_siparis_no"] != "") &
+        (musteri_df["musteri_siparis_no"] != "0") &
+        (musteri_df["musteri_siparis_no"].notna())
+    ]
+    
     musteri = (
-        scope_df[scope_df["firma_adi"] != ""]
-        .groupby("firma_adi")
+        musteri_df.groupby("musteri_siparis_no")
         .agg(
             siparis=("siparis_no", "count"),
-            toplam=("adet", "sum")
+            toplam=("adet", "sum"),
+            ortalama=("adet", "mean")
         )
-        .sort_values("siparis", ascending=False)
+        .sort_values(["siparis", "toplam"], ascending=[False, False])
         .head(10)
     )
 
@@ -565,7 +576,10 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
 
     for i, (idx, row) in enumerate(musteri.iterrows(), 1):
         yuzde = (row["toplam"] / toplam_adet * 100) if toplam_adet else 0
-        lines.append(f"{i}. {idx} → {int(row['siparis'])} sipariş | %{yuzde:.1f} üretim")
+        lines.append(
+            f"{i}. {idx} → {int(row['siparis'])} sipariş | "
+            f"{int(row['toplam'])} boy | %{yuzde:.1f} üretim"
+        )
 
     return "\n".join(lines)
     
