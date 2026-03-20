@@ -3,7 +3,6 @@ from typing import Iterable, Optional
 import gradio as gr
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 COLUMN_ALIASES = {
     "tarih": ["Tarih", "TARIH", "date"],
@@ -28,8 +27,8 @@ NORMALIZED_ALIAS_MAP = {
 }
 
 
-def detect_header_row(excel_path: str, sheet_name: Optional[str] = None, max_rows: int = 15) -> int:
-    preview = pd.read_excel(excel_path, sheet_name=sheet_name, header=None, nrows=max_rows)
+def detect_header_row(excel_file, sheet_name: Optional[str] = None, max_rows: int = 15) -> int:
+    preview = pd.read_excel(excel_file, sheet_name=sheet_name, header=None, nrows=max_rows)
     best_idx = 0
     best_score = -1
     for idx in range(len(preview)):
@@ -57,11 +56,14 @@ def load_excel(excel_file) -> pd.DataFrame:
     if excel_file is None:
         raise ValueError("Lütfen bir Excel dosyası yükleyin.")
 
-    excel_path = excel_file.name if hasattr(excel_file, "name") else str(excel_file)
-    xls = pd.ExcelFile(excel_path)
+    try:
+        xls = pd.ExcelFile(excel_file)
+    except Exception as e:
+        raise ValueError(f"Excel okunamadı: {str(e)}")
+
     sheet_name = xls.sheet_names[0]
-    header_row = detect_header_row(excel_path, sheet_name=sheet_name)
-    df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
+    header_row = detect_header_row(excel_file, sheet_name=sheet_name)
+    df = pd.read_excel(excel_file, sheet_name=sheet_name, header=header_row)
     df = df.dropna(axis=1, how="all").dropna(how="all").copy()
 
     tarih_col = find_column(df, "tarih")
@@ -1049,7 +1051,8 @@ def dashboard_termin_chart(termin_df: pd.DataFrame):
     try:
         zamaninda = int(str(termin_df.iloc[1]["Değer"]).replace(",", ""))
         geciken = int(str(termin_df.iloc[2]["Değer"]).replace(",", ""))
-    except:
+    except Exception as e:
+        print("Termin chart error:", e)
         return None
 
     fig = px.pie(
@@ -1144,7 +1147,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
 
     hedef_uretim = int(hedef_uretim)
-    top_n_value = int(top_n_sec)
+    top_n_value = min(int(top_n_sec), 50)
 
     summary_small_text = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
     boy_df = build_boy_breakdown(filtered, int(secilen_boy))
@@ -1155,7 +1158,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     high_md = high_volume_summary_markdown(scope_df, int(secilen_boy))
     high_profile_df = build_high_volume_profile_summary(scope_df, int(secilen_boy), hedef_uretim)
     high_year_df = build_high_volume_year_summary(scope_df, int(secilen_boy))
-    high_raw_df = build_high_volume_raw(scope_df, int(secilen_boy)).head(500)
+    high_raw_df = build_high_volume_raw(scope_df, int(secilen_boy))
 
     abc_df = build_abc_analysis(scope_df, hedef_uretim)
     abc_md = abc_summary_markdown(abc_df)
@@ -1235,7 +1238,7 @@ def years_from_file(excel_file):
     return gr.update(choices=years, value=years)
 
 
-with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Alüminyum Sipariş Boy Analizi") as demo:
     gr.Markdown("# Alüminyum Sipariş Boy Analizi")
     gr.Markdown(
         "Excel dosyasını yükleyin. Ardından küçük siparişleri, büyük siparişleri ve ABC stok önerisini birlikte analiz edin."
@@ -1245,8 +1248,8 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
         excel_file = gr.File(label="Excel dosyası", file_types=[".xlsx", ".xls"])
         secilen_boy = gr.Dropdown(label="Boy seç", choices=[str(i) for i in range(10, 0, -1)], value="10")
         mod = gr.Dropdown(label="Filtre modu", choices=["Seçilen boy", "Seçilen boy ve altı"], value="Seçilen boy ve altı")
-        years = gr.CheckboxGroup(label="Yıllar", choices=[])
-        profil_ara = gr.Textbox(label="Profil ara (opsiyonel)", placeholder="Örn: TH62")
+        years = gr.CheckboxGroup(label="Yıllar (önce yükle)", choices=[])
+        profil_ara = gr.Textbox(label="Profil ara (opsiyonel)", placeholder="Örn: TH62-01")
         hedef_uretim = gr.Dropdown(
             label="Yılda Kaç Kez Üretim Yapılsın?",
             choices=["4", "6", "12"],
@@ -1404,8 +1407,9 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 7860))
 
-    demo.launch(
+    demo.queue().launch(
         server_name="0.0.0.0",
         server_port=port,
-        show_error=True
+        show_error=True,
+        theme=gr.themes.Soft()
     )
