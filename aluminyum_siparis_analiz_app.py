@@ -1430,14 +1430,26 @@ with gr.Blocks(
     theme=gr.themes.Soft()
 ) as demo:
     gr.HTML("""
-    <div style="display:flex; align-items:center; gap:12px;">
+    <div style="display:flex; align-items:center; gap:16px;">
         <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
-        <h1 style="margin:0;">Alüminyum Sipariş Boy Analizi</h1>
+        
+        <div>
+            <h1 style="margin:0;">
+                🚀 Üretim Analiz & Karar Destek Platformu
+            </h1>
+            
+            <p style="margin:4px 0; font-size:14px; color:#666;">
+                Sipariş verilerinden operasyonel içgörü üretin, üretimi optimize edin ve stok kararlarını veriye dayalı yönetin.
+            </p>
+            
+            <p style="font-size:12px; color:#999; margin:4px 0;">
+                ✔ Küçük Sipariş Analizi  •  ✔ ABC Stok Modeli  •  ✔ Yönetici Dashboard
+            </p>
+        </div>
     </div>
     """)
-    gr.Markdown(
-        "Excel dosyasını yükleyin. Ardından küçük siparişleri, büyük siparişleri ve ABC stok önerisini birlikte analiz edin."
-    )
+
+gr.Markdown("📊 Excel verinizi yükleyin ve analiz sürecini başlatın.")
 
     with gr.Row():
         excel_file = gr.File(label="Excel dosyası", file_types=[".xlsx", ".xls"])
