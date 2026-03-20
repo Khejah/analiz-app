@@ -14,7 +14,7 @@ COLUMN_ALIASES = {
     "profil": ["Profil No", "Profil", "profil", "profil_kodu"],
     "siparis_no": ["Siparis No", "Sipariş No", "siparis_no", "order_no"],
     "musteri": ["Mus.Siparis No", "Müşteri Sipariş No", "Musteri", "Müşteri", "mus_siparis_no"],
-    "adet": ["Adet", "adet", "Boy", "boy_adedi"],
+    "adet": ["Adet", "adet", "boy_adedi"],
     "kg": ["Kg", "kg"],
     "firma": ["Firma Adi", "Firma", "firma_adi"],
     "pres": ["Pres Adi", "Pres", "pres"],
@@ -64,10 +64,12 @@ def find_column(df: pd.DataFrame, logical_name: str) -> Optional[str]:
 
 
 def load_excel(excel_file) -> pd.DataFrame:
+    if excel_file is None:
+        raise ValueError("Lütfen bir Excel dosyası yükleyin.")
+
     if hasattr(excel_file, "name") and os.path.exists(excel_file.name):
         excel_path = excel_file.name
     else:
-        # fallback (Gradio bazen direkt path verir)
         excel_path = str(excel_file)
         if not os.path.exists(excel_path):
             raise ValueError("Dosya yolu alınamadı")
@@ -178,7 +180,7 @@ def load_excel(excel_file) -> pd.DataFrame:
 def filter_data(df: pd.DataFrame, secilen_boy: int, mod: str, yillar: Iterable[int], profil_ara: str = "") -> pd.DataFrame:
     filtered = df.copy()
     if yillar:
-        filtered = filtered[filtered["yil"].isin([int(y) for y in yillar])]
+        filtered = filtered[filtered["yil"].isin([int(str(y)) for y in yillar])]
 
     if mod == "Seçilen boy ve altı":
         filtered = filtered[filtered["adet"] <= secilen_boy]
@@ -195,7 +197,7 @@ def filter_scope_data(df: pd.DataFrame, yillar: Iterable[int], profil_ara: str =
     filtered = df.copy()
 
     if yillar:
-        filtered = filtered[filtered["yil"].isin([int(y) for y in yillar])]
+        filtered = filtered[filtered["yil"].isin([int(str(y)) for y in yillar])]
 
     profil_ara = (profil_ara or "").strip().upper()
     if profil_ara:
@@ -226,7 +228,7 @@ def build_profile_detail(df: pd.DataFrame, profil_kodu: str, yillar):
     data = df[df["profil"] == profil_kodu].copy()
 
     if yillar:
-        data = data[data["yil"].isin([int(y) for y in yillar])]
+        data = data[data["yil"].isin([int(str(y)) for y in yillar])]
 
     yearly = data.groupby("yil").agg(
         toplam_boy=("adet", "sum"),
@@ -1320,13 +1322,13 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         df = load_excel(excel_file)
     except Exception as e:
         raise gr.Error(f"Excel yüklenemedi: {str(e)}")
-    selected_years = [int(y) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
 
     scope_df = filter_scope_data(df, selected_years, profil_ara)
     filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
 
     hedef_uretim = int(hedef_uretim)
-    top_n_value = min(int(top_n_sec), 50)
+    top_n_value = int(top_n_sec)
 
     summary_small_text = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
     boy_df = build_boy_breakdown(filtered, int(secilen_boy))
@@ -1404,7 +1406,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
 
 def load_profile_detail(profil, excel_file, secilen_boy, mod, yillar):
     df = load_excel(excel_file)
-    selected_years = [int(y) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
     filtered = filter_data(df, int(secilen_boy), mod, selected_years, "")
 
     yearly, boy_dist, toplam, siparis = build_profile_detail(filtered, profil, selected_years)
@@ -1424,62 +1426,100 @@ def years_from_file(excel_file):
     years = sorted(df["yil"].unique().tolist())
     return gr.update(choices=years, value=years)
 
-
 with gr.Blocks(
     title="Alüminyum Sipariş Boy Analizi",
     theme=gr.themes.Soft()
 ) as demo:
+
+    # 🔥 STICKY PANEL CSS
     gr.HTML("""
-    <div style="display:flex; align-items:center; gap:16px;">
-        <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
-        
-        <div>
-            <h1 style="margin:0;">
-                🚀 Üretim Analiz & Karar Destek Platformu
-            </h1>
-            
-            <p style="margin:4px 0; font-size:14px; color:#666;">
-                Sipariş verilerinden operasyonel içgörü üretin, üretimi optimize edin ve stok kararlarını veriye dayalı yönetin.
-            </p>
-            
-            <p style="font-size:12px; color:#999; margin:4px 0;">
-                ✔ Küçük Sipariş Analizi  •  ✔ ABC Stok Modeli  •  ✔ Yönetici Dashboard
-            </p>
-        </div>
-    </div>
+    <style>
+    #side-panel {
+        position: sticky;
+        top: 10px;
+    }
+    </style>
     """)
 
-gr.Markdown("📊 Excel verinizi yükleyin ve analiz sürecini başlatın.")
-
     with gr.Row():
-        excel_file = gr.File(label="Excel dosyası", file_types=[".xlsx", ".xls"])
-        secilen_boy = gr.Dropdown(label="Boy seç", choices=[str(i) for i in range(10, 0, -1)], value="10")
-        mod = gr.Dropdown(label="Filtre modu", choices=["Seçilen boy", "Seçilen boy ve altı"], value="Seçilen boy ve altı")
-        years = gr.CheckboxGroup(label="Yıllar (önce yükle)", choices=[])
-        profil_ara = gr.Textbox(label="Profil ara (opsiyonel)", placeholder="Örn: TH62-01")
-        hedef_uretim = gr.Dropdown(
-            label="Yılda Kaç Kez Üretim Yapılsın?",
-            choices=["4", "6", "12"],
-            value="4"
-        )
-        top_n_sec = gr.Dropdown(
-            label="Grafiklerde kaç profil gösterilsin?",
-            choices=["15", "50", "100"],
-            value="15"
-        )
-        
-        hedef_kucuk_oran = gr.Slider(
-            label="Simülasyon: Küçük sipariş oranı (%)",
-            minimum=1,
-            maximum=30,
-            value=10,
-            step=1
-        )
 
-    with gr.Row():
-        load_btn = gr.Button("Yılları yükle")
-        analyze_btn = gr.Button("Analizi çalıştır", variant="primary")
+        # 🔵 SOL → HEADER
+        with gr.Column(scale=2):
+            gr.HTML("""
+            <div style="display:flex; align-items:center; gap:16px;">
+                <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
+                
+                <div>
+                    <h1 style="margin:0;">
+                        🚀 Üretim Analiz & Karar Destek Platformu
+                    </h1>
+                    
+                    <p style="margin:4px 0; font-size:14px; color:#666;">
+                        Sipariş verilerinden operasyonel içgörü üretin, üretimi optimize edin ve stok kararlarını veriye dayalı yönetin.
+                    </p>
+                    
+                    <p style="font-size:12px; color:#999; margin:4px 0;">
+                        ✔ Küçük Sipariş Analizi • ✔ ABC Stok Modeli • ✔ Yönetici Dashboard
+                    </p>
+                </div>
+            </div>
+            """)
 
+        # 🟡 SAĞ → TÜM KONTROL PANELİ (TEK YER)
+        with gr.Column(scale=1, elem_id="side-panel"):
+
+            gr.Markdown("### 📊 Analizi Başlat")
+
+            excel_file = gr.File(
+                label="Excel dosyası",
+                file_types=[".xlsx", ".xls"]
+            )
+
+            secilen_boy = gr.Dropdown(
+                label="Boy seç",
+                choices=[str(i) for i in range(10, 0, -1)],
+                value="10"
+            )
+
+            mod = gr.Dropdown(
+                label="Filtre modu",
+                choices=["Seçilen boy", "Seçilen boy ve altı"],
+                value="Seçilen boy ve altı"
+            )
+
+            years = gr.CheckboxGroup(
+                label="Yıllar",
+                choices=[]
+            )
+
+            profil_ara = gr.Textbox(
+                label="Profil ara (opsiyonel)",
+                placeholder="Örn: TH62-01"
+            )
+
+            hedef_uretim = gr.Dropdown(
+                label="Yılda Kaç Kez Üretim Yapılsın?",
+                choices=["4", "6", "12"],
+                value="4"
+            )
+
+            top_n_sec = gr.Dropdown(
+                label="Grafiklerde kaç profil gösterilsin?",
+                choices=["15", "50", "100"],
+                value="15"
+            )
+
+            hedef_kucuk_oran = gr.Slider(
+                label="Simülasyon: Küçük sipariş oranı (%)",
+                minimum=1,
+                maximum=30,
+                value=10,
+                step=1
+            )
+
+            load_btn = gr.Button("Yılları yükle")
+            analyze_btn = gr.Button("🚀 Analizi çalıştır", variant="primary")
+            
     with gr.Tabs():
         with gr.Tab("En Az Üretime Giren Ürünlerin Listesi"):
             summary_small = gr.Markdown()
