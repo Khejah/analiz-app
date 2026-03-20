@@ -1621,6 +1621,6 @@ if __name__ == "__main__":
     demo.queue().launch(
         server_name="0.0.0.0",
         server_port=port,
-        favicon_path="ic_asistal_a_fab.png",
+        favicon_path="favicon.ico",
         show_error=True
     )
