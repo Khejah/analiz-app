@@ -376,7 +376,94 @@ def build_dashboard_monthly(scope_df: pd.DataFrame) -> pd.DataFrame:
     monthly["toplam_kg"] = monthly["toplam_kg"].round(2)
     return monthly
 
+def build_seasonality_table(scope_df: pd.DataFrame) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame(columns=["Ay No", "Ay", "Toplam Boy", "Toplam Kg", "Sipariş Sayısı"])
 
+    df = scope_df.copy()
+    df["ay_no"] = df["tarih"].dt.month
+
+    sezon = df.groupby("ay_no", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", "sum"),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+    )
+
+    ay_map = {
+        1: "Ocak", 2: "Şubat", 3: "Mart", 4: "Nisan",
+        5: "Mayıs", 6: "Haziran", 7: "Temmuz", 8: "Ağustos",
+        9: "Eylül", 10: "Ekim", 11: "Kasım", 12: "Aralık"
+    }
+
+    sezon["Ay"] = sezon["ay_no"].map(ay_map)
+    sezon["toplam_kg"] = sezon["toplam_kg"].round(2)
+
+    sezon = sezon[["ay_no", "Ay", "toplam_adet", "toplam_kg", "siparis_sayisi"]]
+    sezon.columns = ["Ay No", "Ay", "Toplam Boy", "Toplam Kg", "Sipariş Sayısı"]
+
+    return sezon.sort_values("Ay No")
+
+
+def build_year_month_pivot(scope_df: pd.DataFrame) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame()
+
+    df = scope_df.copy()
+    df["ay_no"] = df["tarih"].dt.month
+
+    pivot = pd.pivot_table(
+        df,
+        index="ay_no",
+        columns="yil",
+        values="adet",
+        aggfunc="sum",
+        fill_value=0
+    ).reset_index()
+
+    ay_map = {
+        1: "Ocak", 2: "Şubat", 3: "Mart", 4: "Nisan",
+        5: "Mayıs", 6: "Haziran", 7: "Temmuz", 8: "Ağustos",
+        9: "Eylül", 10: "Ekim", 11: "Kasım", 12: "Aralık"
+    }
+
+    pivot.insert(1, "Ay", pivot["ay_no"].map(ay_map))
+    pivot = pivot.rename(columns={"ay_no": "Ay No"})
+    return pivot.sort_values("Ay No")
+
+
+def seasonality_chart(season_df: pd.DataFrame):
+    if season_df.empty:
+        return None
+
+    fig = px.bar(
+        season_df,
+        x="Ay",
+        y="Toplam Boy",
+        title="Sezonsallık Analizi - Aylara Göre Toplam Üretim",
+        text="Toplam Boy",
+        hover_data=["Toplam Kg", "Sipariş Sayısı"],
+    )
+    fig.update_layout(height=420)
+    return fig
+
+
+def moving_average_chart(monthly_df: pd.DataFrame):
+    if monthly_df.empty:
+        return None
+
+    chart_df = monthly_df.copy().sort_values("ay")
+    chart_df["hareketli_ortalama_3"] = chart_df["toplam_adet"].rolling(3, min_periods=1).mean().round(2)
+
+    fig = px.line(
+        chart_df,
+        x="ay",
+        y=["toplam_adet", "hareketli_ortalama_3"],
+        markers=True,
+        title="Aylık Üretim Trendi ve 3 Aylık Hareketli Ortalama",
+    )
+    fig.update_layout(height=420)
+    return fig
+    
 def build_dashboard_top_profiles(scope_df: pd.DataFrame, top_n: int = 15) -> pd.DataFrame:
     if scope_df.empty:
         return pd.DataFrame(columns=["Profil Kodu", "Toplam Üretilen Boy", "Toplam Kg", "Sipariş Sayısı"])
@@ -1167,6 +1254,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     dashboard_top_profiles_df = build_dashboard_top_profiles(scope_df, top_n=15)
     dashboard_termin_df = build_termin_dashboard(scope_df)    
     dashboard_pres_eff_df = build_pres_efficiency(scope_df)
+    seasonality_df = build_seasonality_table(scope_df)
+    year_month_pivot_df = build_year_month_pivot(scope_df)
     
     raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
@@ -1211,7 +1300,11 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         dashboard_pres_performance_chart(scope_df),
         dashboard_top_profiles_chart(dashboard_top_profiles_df),
         dashboard_termin_chart(dashboard_termin_df),
-        dashboard_pres_eff_df
+        dashboard_pres_eff_df,
+        seasonality_df,
+        year_month_pivot_df,
+        seasonality_chart(seasonality_df),
+        moving_average_chart(dashboard_monthly_df)
     )
 
 
@@ -1358,7 +1451,14 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi") as demo:
                 with gr.Tab("Termin Özeti"):
                     dashboard_termin_table = gr.Dataframe(interactive=False, wrap=True)
                     
-    load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
+                with gr.Tab("Sezonsallık"):
+                    dashboard_seasonality_table = gr.Dataframe(interactive=False, wrap=True)
+                    dashboard_seasonality_chart = gr.Plot(label="Sezonsallık Grafiği")
+                
+                with gr.Tab("Yıl-Ay Kırılımı"):
+                    dashboard_year_month_pivot_table = gr.Dataframe(interactive=False, wrap=True)
+                    dashboard_moving_avg_chart = gr.Plot(label="Hareketli Ortalama")    
+                    load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
 
     analyze_btn.click(
         fn=analyze,
@@ -1392,7 +1492,11 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi") as demo:
             dashboard_chart_pres,
             dashboard_chart_profiles,
             dashboard_chart_termin,
-            dashboard_pres_eff_table
+            dashboard_pres_eff_table,
+            dashboard_seasonality_table,
+            dashboard_year_month_pivot_table,
+            dashboard_seasonality_chart,
+            dashboard_moving_avg_chart
         ],
     )
 
