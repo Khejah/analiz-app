@@ -1425,8 +1425,16 @@ def years_from_file(excel_file):
     return gr.update(choices=years, value=years)
 
 
-with gr.Blocks(title="Alüminyum Sipariş Boy Analizi") as demo:
-    gr.Markdown("# Alüminyum Sipariş Boy Analizi")
+with gr.Blocks(
+    title="Alüminyum Sipariş Boy Analizi",
+    theme=gr.themes.Soft()
+) as demo:
+    gr.HTML("""
+    <div style="display:flex; align-items:center; gap:12px;">
+        <img src="file/ic_asistal_a_fab.png" style="height:50px;">
+        <h1 style="margin:0;">Alüminyum Sipariş Boy Analizi</h1>
+    </div>
+    """)
     gr.Markdown(
         "Excel dosyasını yükleyin. Ardından küçük siparişleri, büyük siparişleri ve ABC stok önerisini birlikte analiz edin."
     )
@@ -1613,6 +1621,6 @@ if __name__ == "__main__":
     demo.queue().launch(
         server_name="0.0.0.0",
         server_port=port,
-        show_error=True,
-        theme=gr.themes.Soft()
+        favicon_path="ic_asistal_a_fab.png",
+        show_error=True
     )
