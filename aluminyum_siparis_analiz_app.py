@@ -6,7 +6,7 @@ import plotly.express as px
 import os
 import hashlib
 
-CACHE_DIR = "cache_data"
+CACHE_DIR = "/tmp/cache_data"
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 COLUMN_ALIASES = {
@@ -29,7 +29,8 @@ def normalize_col(s: str) -> str:
 def get_file_hash(file_path: str) -> str:
     hasher = hashlib.md5()
     with open(file_path, "rb") as f:
-        hasher.update(f.read())
+        for chunk in iter(lambda: f.read(4096), b""):
+            hasher.update(chunk)
     return hasher.hexdigest()
     
 NORMALIZED_ALIAS_MAP = {
@@ -37,8 +38,8 @@ NORMALIZED_ALIAS_MAP = {
 }
 
 
-def detect_header_row(excel_file, sheet_name: Optional[str] = None, max_rows: int = 15) -> int:
-    preview = pd.read_excel(excel_file, sheet_name=sheet_name, header=None, nrows=max_rows)
+def detect_header_row(excel_path, sheet_name: Optional[str] = None, max_rows: int = 15) -> int:
+    preview = pd.read_excel(excel_path, sheet_name=sheet_name, header=None, nrows=max_rows)
     best_idx = 0
     best_score = -1
     for idx in range(len(preview)):
@@ -66,7 +67,10 @@ def load_excel(excel_file) -> pd.DataFrame:
     if hasattr(excel_file, "name") and os.path.exists(excel_file.name):
         excel_path = excel_file.name
     else:
-        raise ValueError("Dosya yolu alınamadı")
+        # fallback (Gradio bazen direkt path verir)
+        excel_path = str(excel_file)
+        if not os.path.exists(excel_path):
+            raise ValueError("Dosya yolu alınamadı")
 
     file_hash = get_file_hash(excel_path)
     cache_path = os.path.join(CACHE_DIR, f"{file_hash}.pkl")
@@ -74,12 +78,16 @@ def load_excel(excel_file) -> pd.DataFrame:
     # CACHE VARSA → direkt yükle
     if os.path.exists(cache_path):
         try:
-            return pd.read_pickle(cache_path)
+            cached = pd.read_pickle(cache_path)
+            if "adet" in cached.columns:
+                return cached
         except Exception:
-            try:
-                os.remove(cache_path)
-            except Exception:
-                pass
+            pass
+    
+        try:
+            os.remove(cache_path)
+        except Exception:
+            pass
         
     if excel_file is None:
         raise ValueError("Lütfen bir Excel dosyası yükleyin.")
@@ -1308,7 +1316,10 @@ def summary_markdown(
 
 
 def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran):
-    df = load_excel(excel_file)
+    try:
+        df = load_excel(excel_file)
+    except Exception as e:
+        raise gr.Error(f"Excel yüklenemedi: {str(e)}")
     selected_years = [int(y) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
 
     scope_df = filter_scope_data(df, selected_years, profil_ara)
