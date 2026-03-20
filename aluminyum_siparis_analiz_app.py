@@ -987,6 +987,44 @@ def dashboard_pres_performance_chart(scope_df: pd.DataFrame):
     fig.update_layout(height=420)
     return fig
 
+def build_pres_efficiency(scope_df: pd.DataFrame) -> pd.DataFrame:
+    if scope_df.empty or "pres" not in scope_df.columns:
+        return pd.DataFrame()
+
+    pres_df = scope_df.groupby("pres", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", "sum"),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+        satir_sayisi=("siparis_no", "size"),
+    )
+
+    pres_df["adet_per_siparis"] = (
+        pres_df["toplam_adet"] / pres_df["siparis_sayisi"]
+    ).round(2)
+
+    pres_df["kg_per_siparis"] = (
+        pres_df["toplam_kg"] / pres_df["siparis_sayisi"]
+    ).round(2)
+
+    pres_df["adet_per_satir"] = (
+        pres_df["toplam_adet"] / pres_df["satir_sayisi"]
+    ).round(2)
+
+    pres_df = pres_df.sort_values("toplam_adet", ascending=False)
+
+    pres_df.columns = [
+        "Pres",
+        "Toplam Üretim (Boy)",
+        "Toplam Kg",
+        "Sipariş Sayısı",
+        "Satır Sayısı",
+        "Sipariş Başına Boy",
+        "Sipariş Başına Kg",
+        "Satır Başına Boy"
+    ]
+
+    return pres_df
+    
 def dashboard_top_profiles_chart(top_profiles_df: pd.DataFrame):
     if top_profiles_df.empty:
         return None
@@ -1125,7 +1163,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     dashboard_monthly_df = build_dashboard_monthly(scope_df)
     dashboard_top_profiles_df = build_dashboard_top_profiles(scope_df, top_n=15)
     dashboard_termin_df = build_termin_dashboard(scope_df)    
-
+    dashboard_pres_eff_df = build_pres_efficiency(scope_df)
+    
     raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
@@ -1168,7 +1207,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         dashboard_monthly_chart(dashboard_monthly_df),
         dashboard_pres_performance_chart(scope_df),
         dashboard_top_profiles_chart(dashboard_top_profiles_df),
-        dashboard_termin_chart(dashboard_termin_df)
+        dashboard_termin_chart(dashboard_termin_df),
+        dashboard_pres_eff_df
     )
 
 
@@ -1308,7 +1348,10 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
 
                 with gr.Tab("Top Profil Listesi"):
                     dashboard_profiles_table = gr.Dataframe(interactive=False, wrap=True)
-
+                    
+                with gr.Tab("Pres Verimlilik"):
+                    dashboard_pres_eff_table = gr.Dataframe(interactive=False, wrap=True)
+                    
                 with gr.Tab("Termin Özeti"):
                     dashboard_termin_table = gr.Dataframe(interactive=False, wrap=True)
                     
@@ -1345,8 +1388,8 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi", theme=gr.themes.Soft()) 
             dashboard_chart_monthly,
             dashboard_chart_pres,
             dashboard_chart_profiles,
-            dashboard_chart_termin
-            
+            dashboard_chart_termin,
+            dashboard_pres_eff_table
         ],
     )
 
