@@ -655,7 +655,56 @@ def build_abc_analysis(scope_df: pd.DataFrame, hedef_uretim: int) -> pd.DataFram
 
     return profile
 
+def build_profit_simulation(scope_df: pd.DataFrame) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame()
 
+    df = scope_df.groupby("profil", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+        satir_sayisi=("siparis_no", "size"),
+    )
+
+    # Ortalama sipariş büyüklüğü
+    df["ort_boy"] = (df["toplam_adet"] / df["siparis_sayisi"]).round(2)
+
+    # Yoğunluk skoru (çok sipariş ama küçükse kötü)
+    df["yogunluk_skor"] = (df["satir_sayisi"] / df["toplam_adet"]).round(4)
+
+    # Basit değer skoru
+    df["deger_skor"] = (df["toplam_adet"] * df["ort_boy"]).round(2)
+
+    # Normalize skor
+    df["stratejik_skor"] = (
+        df["deger_skor"] / (df["yogunluk_skor"] + 0.0001)
+    ).round(2)
+
+    df = df.sort_values("stratejik_skor", ascending=False)
+
+    def karar(row):
+        if row["stratejik_skor"] > df["stratejik_skor"].quantile(0.8):
+            return "🔥 STRATEJİK (stok yapılır)"
+        elif row["stratejik_skor"] > df["stratejik_skor"].quantile(0.5):
+            return "⚖️ TAKİP (planlı üretim)"
+        else:
+            return "❌ ZAYIF (sipariş bazlı üret)"
+
+    df["Karar"] = df.apply(karar, axis=1)
+
+    df.columns = [
+        "Profil",
+        "Toplam Boy",
+        "Sipariş Sayısı",
+        "Satır Sayısı",
+        "Ortalama Boy",
+        "Yoğunluk Skoru",
+        "Değer Skoru",
+        "Stratejik Skor",
+        "Karar"
+    ]
+
+    return df
+    
 def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
     if abc_df.empty:
         return "### Sonuç\nABC analizi için kayıt bulunamadı."
@@ -1249,6 +1298,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
 
     abc_df = build_abc_analysis(scope_df, hedef_uretim)
     abc_md = abc_summary_markdown(abc_df)
+    profit_df = build_profit_simulation(scope_df)
     dashboard_kpi_df = build_dashboard_kpis(scope_df)
     dashboard_monthly_df = build_dashboard_monthly(scope_df)
     dashboard_top_profiles_df = build_dashboard_top_profiles(scope_df, top_n=15)
@@ -1304,7 +1354,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         seasonality_df,
         year_month_pivot_df,
         seasonality_chart(seasonality_df),
-        moving_average_chart(dashboard_monthly_df)
+        moving_average_chart(dashboard_monthly_df),
+        profit_df
     )
 
 
@@ -1457,7 +1508,11 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi") as demo:
                 
                 with gr.Tab("Yıl-Ay Kırılımı"):
                     dashboard_year_month_pivot_table = gr.Dataframe(interactive=False, wrap=True)
-                    dashboard_moving_avg_chart = gr.Plot(label="Hareketli Ortalama")    
+                    dashboard_moving_avg_chart = gr.Plot(label="Hareketli Ortalama")
+                
+                with gr.Tab("Stratejik Karar"):
+                    profit_table = gr.Dataframe(interactive=False, wrap=True)    
+                    
                     load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
 
     analyze_btn.click(
@@ -1496,7 +1551,8 @@ with gr.Blocks(title="Alüminyum Sipariş Boy Analizi") as demo:
             dashboard_seasonality_table,
             dashboard_year_month_pivot_table,
             dashboard_seasonality_chart,
-            dashboard_moving_avg_chart
+            dashboard_moving_avg_chart,
+            profit_table
         ],
     )
 
