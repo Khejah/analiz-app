@@ -744,7 +744,52 @@ def build_profit_simulation(scope_df: pd.DataFrame) -> pd.DataFrame:
     ]
 
     return df
-    
+
+# =========================
+# 🚨 ROOT CAUSE ENGINE
+# =========================
+def build_root_cause(scope_df: pd.DataFrame, secilen_boy: int):
+    kucuk = scope_df[scope_df["adet"] <= secilen_boy]
+
+    if kucuk.empty:
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+    musteri = kucuk.groupby("musteri_siparis_no").agg(
+        siparis=("siparis_no", "count"),
+        toplam=("adet", "sum")
+    ).sort_values("siparis", ascending=False).head(10)
+
+    profil = kucuk.groupby("profil").agg(
+        siparis=("siparis_no", "count"),
+        toplam=("adet", "sum")
+    ).sort_values("siparis", ascending=False).head(10)
+
+    pres = kucuk.groupby("pres").agg(
+        siparis=("siparis_no", "count"),
+        toplam=("adet", "sum")
+    ).sort_values("siparis", ascending=False)
+
+    return musteri, profil, pres
+
+# =========================
+# 🎯 AKSİYON MOTORU
+# =========================
+def build_action_engine(root_musteri_df, root_profil_df):
+    aksiyonlar = []
+
+    for row in root_musteri_df.head(3).itertuples():
+        aksiyonlar.append(
+            f"👉 {row.Index} müşterisi küçük sipariş üretiyor → sipariş birleştirme öner"
+        )
+
+    for row in root_profil_df.head(3).itertuples():
+        aksiyonlar.append(
+            f"👉 {row.Index} profil düşük adetli → stok veya min sipariş limiti koy"
+        )
+
+    return aksiyonlar
+
+
 def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
     if abc_df.empty:
         return "### Sonuç\nABC analizi için kayıt bulunamadı."
@@ -944,6 +989,23 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
             f"{i}. {row.musteri_siparis_no} → {int(row.siparis)} sipariş | "
             f"{int(row.toplam)} boy | %{yuzde:.1f} üretim"
         )
+
+    lines.append("")
+    lines.append("## 🔍 Kök Neden Analizi")
+
+    for i, row in enumerate(musteri.reset_index().itertuples(), 1):
+        if i > 5:
+            break
+        lines.append(
+            f"{i}. {row.musteri_siparis_no} → {int(row.siparis)} sipariş (küçük sipariş kaynağı)"
+        )
+
+    lines.append("")
+    lines.append("## 🎯 Aksiyon Önerileri")
+
+    lines.append("- Küçük sipariş üreten müşterilere minimum sipariş kuralı getir")
+    lines.append("- Aynı profil siparişlerini birleştir (batch üretim)")
+    lines.append("- Düşük adetli profilleri stoktan üret")
 
     return "\n".join(lines)
     
@@ -1342,6 +1404,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     abc_df = build_abc_analysis(scope_df, hedef_uretim)
     abc_md = abc_summary_markdown(abc_df)
     profit_df = build_profit_simulation(scope_df)
+    root_musteri_df, root_profil_df, root_pres_df = build_root_cause(scope_df, int(secilen_boy))
+    aksiyonlar = build_action_engine(root_musteri_df, root_profil_df)
     dashboard_kpi_df = build_dashboard_kpis(scope_df)
     dashboard_monthly_df = build_dashboard_monthly(scope_df)
     dashboard_top_profiles_df = build_dashboard_top_profiles(scope_df, top_n=15)
@@ -1398,7 +1462,9 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         year_month_pivot_df,
         seasonality_chart(seasonality_df),
         moving_average_chart(dashboard_monthly_df),
-        profit_df
+        profit_df,
+        root_musteri_df,
+        root_profil_df
     )
 
 
@@ -1523,6 +1589,10 @@ with gr.Blocks(
                 with gr.Tab("Yönetici Özeti"):
                     exec_summary_md = gr.Markdown()
 
+                with gr.Tab("Kök Neden Analizi"):
+                    root_musteri_table = gr.Dataframe(label="Müşteri Analizi")
+                    root_profil_table = gr.Dataframe(label="Profil Analizi")
+
                 with gr.Tab("Yönetim Dashboard"):
                     gr.Markdown("## 📊 Yönetim Dashboard")
 
@@ -1645,7 +1715,9 @@ with gr.Blocks(
             dashboard_year_month_pivot_table,
             dashboard_seasonality_chart,
             dashboard_moving_avg_chart,
-            profit_table
+            profit_table,
+            root_musteri_table,
+            root_profil_table
         ],
     )
 
