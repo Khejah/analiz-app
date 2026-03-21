@@ -1857,7 +1857,7 @@ with gr.Blocks(
                     musteri_ozet = gr.Dataframe(label="Müşteri Özeti")
                     musteri_yorum = gr.Markdown()
 
-                with gr.Tab("Yönetim Dashboard"):
+                with gr.Tab("📊 Yönetim Dashboard"):
                     gr.Markdown("## 📊 Yönetim Dashboard")
 
                     dashboard_kpi_table = gr.Dataframe(label="KPI Özeti", interactive=False, wrap=True)
