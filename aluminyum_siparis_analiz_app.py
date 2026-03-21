@@ -133,17 +133,17 @@ def load_excel(excel_file) -> pd.DataFrame:
 
     if musteri_col:
         work["musteri_siparis_no"] = df[musteri_col].astype(str).str.strip()
-
-    MUSTERI_MAP = {
-        "MAGAZA": "MERKEZ MAĞAZA",
-        "MAĞAZA": "MERKEZ MAĞAZA",
-    }
     
-    def normalize_musteri(x):
-        x = str(x).strip().upper()
-        return MUSTERI_MAP.get(x, x)
+        MUSTERI_MAP = {
+            "MAGAZA": "MERKEZ MAĞAZA",
+            "MAĞAZA": "MERKEZ MAĞAZA",
+        }
     
-    work["musteri_siparis_no"] = work["musteri_siparis_no"].apply(normalize_musteri)
+        def normalize_musteri(x):
+            x = str(x).strip().upper()
+            return MUSTERI_MAP.get(x, x)
+    
+        work["musteri_siparis_no"] = work["musteri_siparis_no"].apply(normalize_musteri)
     
     else:
         work["musteri_siparis_no"] = ""
