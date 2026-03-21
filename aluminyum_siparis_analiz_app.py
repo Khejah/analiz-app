@@ -789,7 +789,154 @@ def build_action_engine(root_musteri_df, root_profil_df):
 
     return aksiyonlar
 
+# =========================
+# 📈 FORECAST ENGINE
+# =========================
+def build_forecast_table(scope_df: pd.DataFrame) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame(columns=[
+            "ay", "toplam_adet", "forecast_3_ay_ort", "sapma"
+        ])
 
+    monthly = scope_df.copy()
+    monthly["ay_dt"] = pd.to_datetime(monthly["ay"])
+    
+    monthly = monthly.groupby("ay_dt", as_index=False).agg(
+        toplam_adet=("adet", "sum")
+    ).sort_values("ay_dt")
+    
+    monthly["ay"] = monthly["ay_dt"].dt.strftime("%Y-%m")
+    monthly = monthly.drop(columns="ay_dt")
+
+    monthly["forecast_3_ay_ort"] = (
+        monthly["toplam_adet"]
+        .rolling(3, min_periods=1)
+        .mean()
+        .shift(1)
+        .round(2)
+    )
+
+    monthly["forecast_3_ay_ort"] = monthly["forecast_3_ay_ort"].fillna(monthly["toplam_adet"])
+    monthly["sapma"] = (monthly["toplam_adet"] - monthly["forecast_3_ay_ort"]).round(2)
+
+    return monthly
+
+
+def forecast_chart(forecast_df: pd.DataFrame):
+    if forecast_df.empty:
+        return None
+
+    fig = px.line(
+        forecast_df,
+        x="ay",
+        y=["toplam_adet", "forecast_3_ay_ort"],
+        markers=True,
+        title="Forecast Engine - Gerçekleşen ve 3 Aylık Tahmin",
+    )
+    fig.update_layout(height=420)
+    return fig
+
+# =========================
+# 🔮 SCENARIO ENGINE
+# =========================
+def build_scenario_table(scope_df: pd.DataFrame, secilen_boy: int, hedef_kucuk_oran: float) -> pd.DataFrame:
+    if scope_df.empty:
+        return pd.DataFrame(columns=["Senaryo", "Değer"])
+
+    toplam_satir = len(scope_df)
+    toplam_adet = int(scope_df["adet"].sum())
+
+    kucuk = scope_df[scope_df["adet"] <= secilen_boy].copy()
+    kucuk_satir = len(kucuk)
+    kucuk_adet = int(kucuk["adet"].sum())
+
+    mevcut_kucuk_oran = (kucuk_satir / toplam_satir * 100) if toplam_satir else 0
+    hedef_oran = float(hedef_kucuk_oran)
+    agresif_oran = max(hedef_oran - 3, 1)
+
+    kalip_degisim_sayisi = kucuk.groupby("siparis_no")["profil"].nunique().sum()
+    mevcut_kalip_suresi = float(kalip_degisim_sayisi)  # 1 sipariş/profil geçişi = 1 saat varsayımı
+
+    def scenario_calc(target_ratio):
+        oran_iyilesme = max(mevcut_kucuk_oran - target_ratio, 0)
+        saat_kazanci = round((oran_iyilesme / 100) * mevcut_kalip_suresi, 2)
+        gun_kazanci = round(saat_kazanci / 24, 2)
+        tahmini_yeni_kucuk_satir = int(round(toplam_satir * target_ratio / 100, 0))
+
+        return {
+            "oran_iyilesme": round(oran_iyilesme, 2),
+            "saat_kazanci": saat_kazanci,
+            "gun_kazanci": gun_kazanci,
+            "tahmini_yeni_kucuk_satir": tahmini_yeni_kucuk_satir
+        }
+
+    hedef_sonuc = scenario_calc(hedef_oran)
+    agresif_sonuc = scenario_calc(agresif_oran)
+
+    rows = [
+        {"Senaryo": "Toplam Sipariş Satırı", "Değer": f"{toplam_satir:,}"},
+        {"Senaryo": "Toplam Üretilen Boy", "Değer": f"{toplam_adet:,}"},
+        {"Senaryo": f"Mevcut Küçük Sipariş Oranı (≤{secilen_boy})", "Değer": f"%{mevcut_kucuk_oran:.2f}"},
+        {"Senaryo": "Mevcut Küçük Sipariş Satırı", "Değer": f"{kucuk_satir:,}"},
+        {"Senaryo": "Mevcut Küçük Sipariş Üretimi", "Değer": f"{kucuk_adet:,}"},
+        {"Senaryo": f"Hedef Senaryo Oranı", "Değer": f"%{hedef_oran:.2f}"},
+        {"Senaryo": "Hedef Senaryo Tahmini Küçük Sipariş", "Değer": f"{hedef_sonuc['tahmini_yeni_kucuk_satir']:,}"},
+        {"Senaryo": "Hedef Senaryo Saat Kazancı", "Değer": f"{hedef_sonuc['saat_kazanci']:,}"},
+        {"Senaryo": "Hedef Senaryo Gün Kazancı", "Değer": f"{hedef_sonuc['gun_kazanci']:,}"},
+        {"Senaryo": f"Agresif Senaryo Oranı", "Değer": f"%{agresif_oran:.2f}"},
+        {"Senaryo": "Agresif Senaryo Tahmini Küçük Sipariş", "Değer": f"{agresif_sonuc['tahmini_yeni_kucuk_satir']:,}"},
+        {"Senaryo": "Agresif Senaryo Saat Kazancı", "Değer": f"{agresif_sonuc['saat_kazanci']:,}"},
+        {"Senaryo": "Agresif Senaryo Gün Kazancı", "Değer": f"{agresif_sonuc['gun_kazanci']:,}"},
+    ]
+
+    return pd.DataFrame(rows)
+
+
+def scenario_summary_markdown(scope_df: pd.DataFrame, secilen_boy: int, hedef_kucuk_oran: float) -> str:
+    if scope_df.empty:
+        return "### Senaryo sonucu üretilemedi"
+
+    toplam_satir = len(scope_df)
+    kucuk = scope_df[scope_df["adet"] <= secilen_boy].copy()
+    kucuk_satir = len(kucuk)
+
+    mevcut_oran = (kucuk_satir / toplam_satir * 100) if toplam_satir else 0
+    hedef_oran = float(hedef_kucuk_oran)
+    agresif_oran = max(hedef_oran - 3, 1)
+
+    kalip_degisim_sayisi = kucuk.groupby("siparis_no")["profil"].nunique().sum()
+
+    def hesapla(oran):
+        iyilesme = max(mevcut_oran - oran, 0)
+        kazanc_saat = (iyilesme / 100) * kalip_degisim_sayisi
+        kazanc_gun = kazanc_saat / 24
+        return iyilesme, kazanc_saat, kazanc_gun
+
+    iy1, ks1, kg1 = hesapla(hedef_oran)
+    iy2, ks2, kg2 = hesapla(agresif_oran)
+
+    lines = [
+        "## 🔮 Scenario Engine",
+        "",
+        f"- Mevcut küçük sipariş oranı: **%{mevcut_oran:.1f}**",
+        f"- Hedef oran: **%{hedef_oran:.1f}**",
+        f"- Agresif oran: **%{agresif_oran:.1f}**",
+        "",
+        "### Senaryo 1: Hedef Oran",
+        f"- İyileşme: **%{iy1:.1f}**",
+        f"- Kazanç: **{ks1:.1f} saat** (~**{kg1:.1f} gün**)",
+        "",
+        "### Senaryo 2: Agresif Oran",
+        f"- İyileşme: **%{iy2:.1f}**",
+        f"- Kazanç: **{ks2:.1f} saat** (~**{kg2:.1f} gün**)",
+        "",
+        "### Yönetim Yorumu",
+        "- Küçük sipariş oranı düştükçe kalıp değişim yükü azalır",
+        "- Aynı profili birleştirerek üretmek hat ve planlama verimini artırır",
+        "- Bu tablo karar toplantısında direkt kullanılabilir",
+    ]
+    return "\n".join(lines)
+    
 def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
     if abc_df.empty:
         return "### Sonuç\nABC analizi için kayıt bulunamadı."
@@ -979,6 +1126,16 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
         lines.append(
             f"- {row['Profil Kodu']} → aylık: {int(row['Yıllık Tüketim']/12):,} / yıllık: {int(row['Yıllık Tüketim']):,}"
         )
+
+    forecast_df = build_forecast_table(scope_df)
+
+    if not forecast_df.empty:
+        son_gercek = forecast_df.iloc[-1]["toplam_adet"]
+        son_tahmin = forecast_df.iloc[-1]["forecast_3_ay_ort"]
+        lines.append("")
+        lines.append("## 📈 Kısa Vadeli Tahmin")
+        lines.append(f"- Son gerçekleşen aylık üretim: **{int(son_gercek):,} boy**")
+        lines.append(f"- 3 aylık ortalama tahmin seviyesi: **{int(son_tahmin):,} boy**")
 
     lines.append("")
     lines.append("## 👤 Müşteri Yük Analizi")
@@ -1413,6 +1570,9 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     dashboard_pres_eff_df = build_pres_efficiency(scope_df)
     seasonality_df = build_seasonality_table(scope_df)
     year_month_pivot_df = build_year_month_pivot(scope_df)
+    forecast_df = build_forecast_table(scope_df)
+    scenario_df = build_scenario_table(scope_df, int(secilen_boy), hedef_kucuk_oran)
+    scenario_md = scenario_summary_markdown(scope_df, int(secilen_boy), hedef_kucuk_oran)
     
     raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
@@ -1464,7 +1624,11 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         moving_average_chart(dashboard_monthly_df),
         profit_df,
         root_musteri_df,
-        root_profil_df
+        root_profil_df,
+        forecast_df,
+        forecast_chart(forecast_df),
+        scenario_md,
+        scenario_df
     )
 
 
@@ -1630,6 +1794,14 @@ with gr.Blocks(
                         with gr.Tab("Stratejik Karar"):
                             profit_table = gr.Dataframe(interactive=False, wrap=True)
 
+                        with gr.Tab("Forecast Engine"):
+                            forecast_table = gr.Dataframe(interactive=False, wrap=True)
+                            forecast_plot = gr.Plot(label="Forecast Grafiği")
+                        
+                        with gr.Tab("Scenario Engine"):
+                            scenario_md_box = gr.Markdown()
+                            scenario_table = gr.Dataframe(interactive=False, wrap=True)
+
         # ✅ SAĞ → STICKY PANEL
         with gr.Column(scale=1, elem_id="side-panel"):
 
@@ -1717,7 +1889,11 @@ with gr.Blocks(
             dashboard_moving_avg_chart,
             profit_table,
             root_musteri_table,
-            root_profil_table
+            root_profil_table,
+            forecast_table,
+            forecast_plot,
+            scenario_md_box,
+            scenario_table
         ],
     )
 
