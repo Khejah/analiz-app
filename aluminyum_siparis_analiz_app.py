@@ -1750,7 +1750,6 @@ def years_from_file(excel_file):
 
 with gr.Blocks(
     title="Alüminyum Sipariş Boy Analizi",
-    theme=gr.themes.Soft()
 ) as demo:
 
     # 🔥 STICKY PANEL CSS
@@ -1770,7 +1769,7 @@ with gr.Blocks(
         
         <div>
             <h1 style="margin:0;">
-                🚀 Üretim Analiz & Karar Destek Platformu
+                🏭 Üretim Analiz & Karar Destek Platformu
             </h1>
             
             <p style="margin:4px 0; font-size:14px; color:#666;">
@@ -1792,7 +1791,7 @@ with gr.Blocks(
 
             with gr.Tabs():
 
-                with gr.Tab("En Az Üretime Giren Ürünlerin Listesi"):
+                with gr.Tab("📉 En Az Üretime Giren Ürünlerin Listesi"):
                     summary_small = gr.Markdown()
 
                     with gr.Row():
@@ -1825,7 +1824,7 @@ with gr.Blocks(
                         with gr.Tab("Ham Kayıt Önizleme"):
                             raw_table = gr.Dataframe(interactive=False, wrap=True)
 
-                with gr.Tab("En Çok Üretime Giren Ürünlerin Listesi"):
+                with gr.Tab("📈 En Çok Üretime Giren Ürünlerin Listesi"):
                     high_summary = gr.Markdown()
                     high_chart = gr.Plot(label="En Çok Üretime Giren Profiller")
 
@@ -1839,15 +1838,15 @@ with gr.Blocks(
                         with gr.Tab("Ham Kayıt Önizleme"):
                             high_raw_table = gr.Dataframe(interactive=False, wrap=True)
 
-                with gr.Tab("ABC Analizi ve Stok Önerisi"):
+                with gr.Tab("📦 ABC Analizi ve Stok Önerisi"):
                     abc_summary = gr.Markdown()
                     abc_plot = gr.Plot(label="ABC Analizi")
                     abc_table = gr.Dataframe(interactive=False, wrap=True)
 
-                with gr.Tab("Yönetici Özeti"):
+                with gr.Tab("🧠 Yönetici Özeti"):
                     exec_summary_md = gr.Markdown()
 
-                with gr.Tab("Kök Neden Analizi"):
+                with gr.Tab("🔍 Kök Neden Analizi"):
                     root_musteri_table = gr.Dataframe(label="Müşteri Analizi")
                     root_profil_table = gr.Dataframe(label="Profil Analizi")
 
@@ -2019,6 +2018,7 @@ if __name__ == "__main__":
     demo.queue().launch(
         server_name="0.0.0.0",
         server_port=port,
+        theme=gr.themes.Soft(),
         favicon_path="favicon.png",
         show_error=True
     )
