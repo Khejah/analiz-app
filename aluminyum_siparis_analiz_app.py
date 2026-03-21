@@ -1538,7 +1538,16 @@ def dashboard_termin_chart(termin_df: pd.DataFrame):
 
     fig.update_layout(height=420)
     return fig
-    
+
+def load_customer_detail(musteri, excel_file, secilen_boy, mod, yillar, profil_ara):
+    df = load_excel(excel_file)
+
+    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+
+    scope_df = filter_scope_data(df, selected_years, profil_ara)
+
+    return build_customer_detail(scope_df, musteri, int(secilen_boy))
+
 def summary_markdown(
     filtered: pd.DataFrame,
     scope_df: pd.DataFrame,
@@ -2001,15 +2010,6 @@ with gr.Blocks(
         inputs=[musteri_sec, excel_file, secilen_boy, mod, years, profil_ara],
         outputs=[musteri_ozet, musteri_yorum]
     )
-
-def load_customer_detail(musteri, excel_file, secilen_boy, mod, yillar, profil_ara):
-    df = load_excel(excel_file)
-
-    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
-
-    scope_df = filter_scope_data(df, selected_years, profil_ara)
-
-    return build_customer_detail(scope_df, musteri, int(secilen_boy))
 
 if __name__ == "__main__":
     import os
