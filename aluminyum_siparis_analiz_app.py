@@ -133,6 +133,18 @@ def load_excel(excel_file) -> pd.DataFrame:
 
     if musteri_col:
         work["musteri_siparis_no"] = df[musteri_col].astype(str).str.strip()
+
+    MUSTERI_MAP = {
+        "MAGAZA": "MERKEZ MAĞAZA",
+        "MAĞAZA": "MERKEZ MAĞAZA",
+    }
+    
+    def normalize_musteri(x):
+        x = str(x).strip().upper()
+        return MUSTERI_MAP.get(x, x)
+    
+    work["musteri_siparis_no"] = work["musteri_siparis_no"].apply(normalize_musteri)
+    
     else:
         work["musteri_siparis_no"] = ""
 
@@ -744,6 +756,74 @@ def build_profit_simulation(scope_df: pd.DataFrame) -> pd.DataFrame:
     ]
 
     return df
+
+# =========================
+# 👤 CUSTOMER ENGINE
+# =========================
+def build_customer_detail(scope_df: pd.DataFrame, musteri_adi: str, secilen_boy: int):
+
+    df = scope_df[scope_df["musteri_siparis_no"] == musteri_adi].copy()
+
+    if df.empty:
+        return pd.DataFrame(), "Veri bulunamadı"
+
+    toplam_satir = len(df)
+    toplam_adet = int(df["adet"].sum())
+
+    kucuk = df[df["adet"] <= secilen_boy]
+    buyuk = df[df["adet"] > secilen_boy]
+
+    kucuk_satir = len(kucuk)
+    buyuk_satir = len(buyuk)
+
+    kucuk_adet = int(kucuk["adet"].sum())
+    buyuk_adet = int(buyuk["adet"].sum())
+
+    kucuk_oran = (kucuk_satir / toplam_satir * 100) if toplam_satir else 0
+    buyuk_oran = (buyuk_satir / toplam_satir * 100) if toplam_satir else 0
+
+    kucuk_adet_oran = (kucuk_adet / toplam_adet * 100) if toplam_adet else 0
+    buyuk_adet_oran = (buyuk_adet / toplam_adet * 100) if toplam_adet else 0
+
+    # 📊 tablo
+    summary_df = pd.DataFrame([
+        ["Toplam Sipariş", toplam_satir],
+        ["Toplam Üretim (Boy)", toplam_adet],
+        ["Küçük Sipariş (adet)", kucuk_satir],
+        ["Büyük Sipariş (adet)", buyuk_satir],
+        ["Küçük Sipariş (%)", round(kucuk_oran,1)],
+        ["Büyük Sipariş (%)", round(buyuk_oran,1)],
+        ["Küçük Üretim (%)", round(kucuk_adet_oran,1)],
+        ["Büyük Üretim (%)", round(buyuk_adet_oran,1)],
+    ], columns=["Metrik", "Değer"])
+
+    # 🧠 yorum motoru
+    if kucuk_oran > 50:
+        yorum = "❌ Çok fazla küçük sipariş → müşteriyi toplu siparişe zorla"
+    elif kucuk_oran > 25:
+        yorum = "⚠️ Siparişler bölünüyor → birleştirme öner"
+    else:
+        yorum = "✅ Müşteri verimli çalışıyor"
+
+    detay_text = f"""
+## 👤 Müşteri Analizi: {musteri_adi}
+
+- Toplam sipariş: **{toplam_satir}**
+- Toplam üretim: **{toplam_adet} boy**
+
+### 🔻 Küçük Sipariş
+- {kucuk_satir} adet (%{kucuk_oran:.1f})
+- {kucuk_adet} boy (%{kucuk_adet_oran:.1f})
+
+### 🔺 Büyük Sipariş
+- {buyuk_satir} adet (%{buyuk_oran:.1f})
+- {buyuk_adet} boy (%{buyuk_adet_oran:.1f})
+
+### 🎯 Yorum
+{yorum}
+"""
+
+    return summary_df, detay_text
 
 # =========================
 # 🚨 ROOT CAUSE ENGINE
@@ -1579,6 +1659,10 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
 
     profile_list = profile_df["Profil Kodu"].tolist() if not profile_df.empty else []
+    musteri_list = sorted([
+        x for x in scope_df["musteri_siparis_no"].dropna().unique().tolist()
+        if str(x).strip() != ""
+    ])
     exec_summary = build_executive_summary(
         scope_df,
         filtered,
@@ -1608,6 +1692,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         abc_df,
         abc_chart(abc_df, top_n_value),
         gr.update(choices=profile_list, value=profile_list[0] if profile_list else ""),
+        gr.update(choices=musteri_list, value=musteri_list[0] if musteri_list else ""),
         exec_summary,
         dashboard_kpi_df,
         dashboard_monthly_df,
@@ -1757,6 +1842,13 @@ with gr.Blocks(
                     root_musteri_table = gr.Dataframe(label="Müşteri Analizi")
                     root_profil_table = gr.Dataframe(label="Profil Analizi")
 
+                with gr.Tab("👤 Müşteri Analizi"):
+            
+                    musteri_sec = gr.Dropdown(label="Müşteri seç", choices=[])
+                
+                    musteri_ozet = gr.Dataframe(label="Müşteri Özeti")
+                    musteri_yorum = gr.Markdown()
+
                 with gr.Tab("Yönetim Dashboard"):
                     gr.Markdown("## 📊 Yönetim Dashboard")
 
@@ -1873,6 +1965,7 @@ with gr.Blocks(
             abc_table,
             abc_plot,
             profil_sec,
+            musteri_sec,
             exec_summary_md,
             dashboard_kpi_table,
             dashboard_monthly_table,
@@ -1902,6 +1995,22 @@ with gr.Blocks(
         inputs=[profil_sec, excel_file, secilen_boy, mod, years],
         outputs=[detail_year, detail_boy, detail_summary]
     )
+
+def load_customer_detail(musteri, excel_file, secilen_boy, mod, yillar):
+    df = load_excel(excel_file)
+
+    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+
+    scope_df = filter_scope_data(df, selected_years)
+
+    return build_customer_detail(scope_df, musteri, int(secilen_boy))
+
+
+musteri_sec.change(
+    fn=load_customer_detail,
+    inputs=[musteri_sec, excel_file, secilen_boy, mod, years],
+    outputs=[musteri_ozet, musteri_yorum]
+)
 
 if __name__ == "__main__":
     import os
