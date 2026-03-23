@@ -2,3 +2,4 @@ gradio
 pandas
 plotly
 openpyxl
+rapidfuzz
