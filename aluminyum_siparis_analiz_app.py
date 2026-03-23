@@ -130,10 +130,10 @@ def load_excel(excel_file) -> pd.DataFrame:
     cache_path = os.path.join(CACHE_DIR, f"{file_hash}.pkl")
 
     # CACHE VARSA → direkt yükle
-    if os.path.exists(cache_path):
+    if False and os.path.exists(cache_path):
         try:
             cached = pd.read_pickle(cache_path)
-            required_cols = {"tarih", "profil", "siparis_no", "adet"}
+            required_cols = {"tarih", "profil", "siparis_no", "adet", "ANA_MUSTERI"}
 
             if required_cols.issubset(set(cached.columns)):
                 return cached
@@ -196,9 +196,24 @@ def load_excel(excel_file) -> pd.DataFrame:
             return MUSTERI_MAP.get(x, x)
     
         work["musteri_siparis_no"] = work["musteri_siparis_no"].apply(normalize_musteri)
+        # 🔥 MAPPING UYGULA
+        MAPPING_FILE = "./musteri_mapping.json"
+        
+        def load_mapping():
+            if os.path.exists(MAPPING_FILE):
+                with open(MAPPING_FILE, "r") as f:
+                    return json.load(f)
+            return {}
+        
+        mapping = {k.lower(): v for k, v in load_mapping().items()}
+        
+        work["ANA_MUSTERI"] = work["musteri_siparis_no"].apply(
+            lambda x: mapping.get(x.lower(), x)
+        )
     
     else:
         work["musteri_siparis_no"] = ""
+        work["ANA_MUSTERI"] = ""
 
     if firma_col:
         work["firma_adi"] = df[firma_col].astype(str).str.strip()
@@ -625,7 +640,7 @@ def build_high_volume_raw(scope_df: pd.DataFrame, min_boy: int) -> pd.DataFrame:
     if filtered.empty:
         return pd.DataFrame(columns=["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"])
 
-    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
+    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "ANA_MUSTERI", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("adet", ascending=False).copy()
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
     return raw.head(500)
@@ -836,7 +851,7 @@ def build_customer_merge_table(df):
 # =========================
 def build_customer_detail(scope_df: pd.DataFrame, musteri_adi: str, secilen_boy: int):
 
-    df = scope_df[scope_df["musteri_siparis_no"] == musteri_adi].copy()
+    df = scope_df[scope_df["ANA_MUSTERI"] == musteri_adi].copy()
 
     if df.empty:
         return pd.DataFrame(), "Veri bulunamadı"
@@ -908,7 +923,7 @@ def build_root_cause(scope_df: pd.DataFrame, secilen_boy: int):
     if kucuk.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    musteri = kucuk.groupby("musteri_siparis_no").agg(
+    musteri = kucuk.groupby("ANA_MUSTERI").agg(
         siparis=("siparis_no", "count"),
         toplam=("adet", "sum")
     ).sort_values("siparis", ascending=False).head(10)
@@ -1173,17 +1188,17 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     # MÜŞTERİ ANALİZİ (musteri_siparis_no bazlı)
     musteri_df = scope_df.copy()
     
-    musteri_df["musteri_siparis_no"] = musteri_df["musteri_siparis_no"].astype(str).str.strip()
+    musteri_df["ANA_MUSTERI"] = musteri_df["ANA_MUSTERI"].astype(str).str.strip()
     
     # boş ve hatalı kayıtları temizle
     musteri_df = musteri_df[
-        (musteri_df["musteri_siparis_no"] != "") &
-        (musteri_df["musteri_siparis_no"] != "0") &
-        (musteri_df["musteri_siparis_no"].notna())
+        (musteri_df["ANA_MUSTERI"] != "") &
+        (musteri_df["ANA_MUSTERI"] != "0") &
+        (musteri_df["ANA_MUSTERI"].notna())
     ]
     
     musteri = (
-        musteri_df.groupby("musteri_siparis_no")
+        musteri_df.groupby("ANA_MUSTERI")
         .agg(
             siparis=("siparis_no", "count"),
             toplam=("adet", "sum"),
@@ -1297,7 +1312,7 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     for i, row in enumerate(musteri.reset_index().itertuples(), 1):
         yuzde = (row.toplam / toplam_adet * 100) if toplam_adet else 0
         lines.append(
-            f"{i}. {row.musteri_siparis_no} → {int(row.siparis)} sipariş | "
+            f"{i}. {row.ANA_MUSTERI} → {int(row.siparis)} sipariş | "
             f"{int(row.toplam)} boy | %{yuzde:.1f} üretim"
         )
 
@@ -1308,7 +1323,7 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
         if i > 5:
             break
         lines.append(
-            f"{i}. {row.musteri_siparis_no} → {int(row.siparis)} sipariş (küçük sipariş kaynağı)"
+            f"{i}. {row.ANA_MUSTERI} → {int(row.siparis)} sipariş (küçük sipariş kaynağı)"
         )
 
     lines.append("")
@@ -1705,7 +1720,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
 
     scope_df = filter_scope_data(df, selected_years, profil_ara)
-    merge_df = build_customer_merge_table(scope_df)
+    # merge_df = build_customer_merge_table(scope_df)
     filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
 
     hedef_uretim = int(hedef_uretim)
@@ -1738,13 +1753,13 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     scenario_df = build_scenario_table(scope_df, int(secilen_boy), hedef_kucuk_oran)
     scenario_md = scenario_summary_markdown(scope_df, int(secilen_boy), hedef_kucuk_oran)
     
-    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
+    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "ANA_MUSTERI", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
 
     profile_list = profile_df["Profil Kodu"].tolist() if not profile_df.empty else []
     musteri_list = sorted([
-        x for x in scope_df["musteri_siparis_no"].dropna().unique().tolist()
+        x for x in scope_df["ANA_MUSTERI"].dropna().unique().tolist()
         if str(x).strip() != ""
     ])
     exec_summary = build_executive_summary(
@@ -1798,7 +1813,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         forecast_chart(forecast_df),
         scenario_md,
         scenario_df,
-        merge_df
+        pd.DataFrame()
     )
 
 
