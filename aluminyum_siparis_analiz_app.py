@@ -48,24 +48,27 @@ def clean_musteri(text):
     return text
 
 
-def group_customers(df, threshold=85):
+def auto_generate_mapping(df, threshold=85):
     groups = {}
-    
-    for name in df["musteri_siparis_no"]:
+    mapping = {}
+
+    for name in df["musteri_siparis_no"].dropna().unique():
         clean = clean_musteri(name)
-        
+
         found = False
-        
+
         for key in groups:
             if SequenceMatcher(None, clean, key).ratio() * 100 >= threshold:
                 groups[key].append(name)
+                mapping[name] = groups[key][0]  # ilk ismi ana müşteri yap
                 found = True
                 break
-        
+
         if not found:
             groups[clean] = [name]
-    
-    return groups
+            mapping[name] = name
+
+    return mapping, groups
 
 def save_merge_map(groups):
     with open(MERGE_CACHE_FILE, "w") as f:
@@ -205,12 +208,23 @@ def load_excel(excel_file) -> pd.DataFrame:
                     return json.load(f)
             return {}
         
-        mapping = {k.lower(): v for k, v in load_mapping().items()}
+        user_mapping = load_mapping()
+
+        auto_mapping, groups = auto_generate_mapping(work)
+        
+        # 🔥 USER mapping öncelikli
+        final_mapping = {}
+        
+        for k, v in auto_mapping.items():
+            final_mapping[k.lower()] = v
+        
+        for k, v in user_mapping.items():
+            final_mapping[k.lower()] = v
         
         work["ANA_MUSTERI"] = work["musteri_siparis_no"].apply(
-            lambda x: mapping.get(x.lower(), x)
+            lambda x: final_mapping.get(x.lower(), x)
         )
-    
+        
     else:
         work["musteri_siparis_no"] = ""
         work["ANA_MUSTERI"] = ""
@@ -1720,7 +1734,17 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
 
     scope_df = filter_scope_data(df, selected_years, profil_ara)
-    # merge_df = build_customer_merge_table(scope_df)
+    _, groups = auto_generate_mapping(scope_df)
+    
+    rows = []
+    for key, vals in groups.items():
+        rows.append({
+            "Ana Musteri": key,
+            "Farkli Yazim": len(set(vals)),
+            "Tum Isimler": ", ".join(set(vals))
+        })
+    
+    merge_df = pd.DataFrame(rows).sort_values("Farkli Yazim", ascending=False)
     filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
 
     hedef_uretim = int(hedef_uretim)
@@ -1813,7 +1837,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         forecast_chart(forecast_df),
         scenario_md,
         scenario_df,
-        pd.DataFrame()
+        merge_df
     )
 
 
