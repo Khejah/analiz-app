@@ -5,81 +5,33 @@ import pandas as pd
 import plotly.express as px
 import os
 import hashlib
-from difflib import SequenceMatcher
 import json
 import re
 import unicodedata
 
-MERGE_CACHE_FILE = "/tmp/musteri_merge_map.json"
 CACHE_DIR = "/tmp/cache_data"
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 COLUMN_ALIASES = {
-    "tarih": ["Tarih", "TARIH", "date"],
-    "profil": ["Profil No", "Profil", "profil", "profil_kodu"],
-    "siparis_no": ["Siparis No", "Sipariş No", "siparis_no", "order_no"],
-    "musteri": ["Mus.Siparis No", "Müşteri Sipariş No", "Musteri", "Müşteri", "mus_siparis_no"],
+    "tarih": ["Tarih", "TARIH", "date", "tarih_"],
+    "profil": ["Profil No", "Profil", "profil", "profil_kodu", "profil_no"],
+    "siparis_no": ["Siparis No", "Sipariş No", "siparis_no", "order_no", "sip_no"],
+    "musteri": ["Mus.Siparis No", "Müşteri Sipariş No", "Musteri", "Müşteri", "mus_siparis_no", "musteri_siparis_no"],
     "adet": ["Adet", "adet", "boy_adedi"],
-    "kg": ["Kg", "kg"],
-    "firma": ["Firma Adi", "Firma", "firma_adi"],
-    "pres": ["Pres Adi", "Pres", "pres"],
-    "termin": ["Termin"],
-    "termin_hafta": ["Termin Hafta"],    
+    "kg": ["Kg", "kg", "kilogram"],
+    "firma": ["Firma Adi", "Firma", "firma_adi", "firma_adi_"],
+    "pres": ["Pres Adi", "Pres", "pres", "pres_adi"],
+    "termin": ["Termin", "termin_tarihi"],
+    "termin_hafta": ["Termin Hafta", "termin_hafta"],
 }
 
-
 def normalize_col(s: str) -> str:
-    return str(s).strip().lower().replace("ı", "i").replace("ş", "s").replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c")
-
-def clean_musteri(text):
-    if pd.isna(text):
-        return ""
-    
-    text = str(text).lower()
-    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
-    
-    blacklist = ["acil", "acilll", "erdem", "siparis", "order"]
-    for w in blacklist:
-        text = text.replace(w, "")
-    
-    text = re.sub(r'[^a-z0-9 ]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    
-    return text
-
-
-def auto_generate_mapping(df, threshold=85):
-    groups = {}
-    mapping = {}
-
-    for name in df["musteri_siparis_no"].dropna().unique():
-        clean = clean_musteri(name)
-
-        found = False
-
-        for key in groups:
-            if SequenceMatcher(None, clean, key).ratio() * 100 >= threshold:
-                groups[key].append(name)
-                mapping[name] = groups[key][0]  # ilk ismi ana müşteri yap
-                found = True
-                break
-
-        if not found:
-            groups[clean] = [name]
-            mapping[name] = name
-
-    return mapping, groups
-
-def save_merge_map(groups):
-    with open(MERGE_CACHE_FILE, "w") as f:
-        json.dump(groups, f)
-
-
-def load_merge_map():
-    if os.path.exists(MERGE_CACHE_FILE):
-        with open(MERGE_CACHE_FILE, "r") as f:
-            return json.load(f)
-    return None
+    s = str(s).strip().lower()
+    s = s.replace("ı", "i").replace("İ", "i").replace("I", "i")
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = re.sub(r"[^a-z0-9]+", "_", s)
+    return s.strip("_")
     
 def get_file_hash(file_path: str) -> str:
     hasher = hashlib.md5()
@@ -94,7 +46,14 @@ NORMALIZED_ALIAS_MAP = {
 
 
 def detect_header_row(excel_path, sheet_name: Optional[str] = None, max_rows: int = 15) -> int:
-    preview = pd.read_excel(excel_path, sheet_name=sheet_name, header=None, nrows=max_rows)
+    preview = pd.read_excel(
+        excel_path,
+        sheet_name=sheet_name,
+        header=None,
+        nrows=max_rows
+    )
+    preview = preview.fillna("")
+
     best_idx = 0
     best_score = -1
     for idx in range(len(preview)):
@@ -112,12 +71,66 @@ def detect_header_row(excel_path, sheet_name: Optional[str] = None, max_rows: in
 
 def find_column(df: pd.DataFrame, logical_name: str) -> Optional[str]:
     aliases = NORMALIZED_ALIAS_MAP[logical_name]
-    for col in df.columns:
-        if normalize_col(col) in aliases:
+    normalized_columns = {col: normalize_col(col) for col in df.columns}
+
+    for col, norm in normalized_columns.items():
+        if norm in aliases:
             return col
+
     return None
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MAPPING_FILE = os.path.join(BASE_DIR, "musteri_mapping.json")
 
+def load_customer_mapping():
+    if not os.path.exists(MAPPING_FILE):
+        return {}
+
+    try:
+        with open(MAPPING_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return {}
+
+    if not isinstance(data, dict):
+        return {}
+
+    cleaned = {}
+    for ana_musteri, altlar in data.items():
+        key = str(ana_musteri).strip().upper()
+        if not key:
+            continue
+
+        if isinstance(altlar, list):
+            cleaned[key] = [str(x).strip().upper() for x in altlar if str(x).strip()]
+        else:
+            cleaned[key] = []
+
+    return cleaned
+
+def normalize_musteri_value(x):
+    if pd.isna(x):
+        return ""
+    return str(x).strip().upper()
+
+
+def get_customer_group_list(mapping: dict, ana_musteri: str):
+    if not ana_musteri:
+        return []
+
+    altlar = mapping.get(ana_musteri, [])
+    tum_liste = [ana_musteri] + altlar
+
+    benzersiz = []
+    seen = set()
+    for item in tum_liste:
+        val = str(item).strip().upper()
+        if val and val not in seen:
+            seen.add(val)
+            benzersiz.append(val)
+
+    return benzersiz
+    
 def load_excel(excel_file) -> pd.DataFrame:
     if excel_file is None:
         raise ValueError("Lütfen bir Excel dosyası yükleyin.")
@@ -133,13 +146,25 @@ def load_excel(excel_file) -> pd.DataFrame:
     cache_path = os.path.join(CACHE_DIR, f"{file_hash}.pkl")
 
     # CACHE VARSA → direkt yükle
-    if False and os.path.exists(cache_path):
+    if os.path.exists(cache_path):
         try:
             cached = pd.read_pickle(cache_path)
-            required_cols = {"tarih", "profil", "siparis_no", "adet", "ANA_MUSTERI"}
-
+            required_cols = {"tarih", "profil", "siparis_no", "adet", "yil", "ay"}
+            
             if required_cols.issubset(set(cached.columns)):
+                optional_defaults = {
+                    "musteri_siparis_no": "",
+                    "firma_adi": "",
+                    "kg": 0,
+                    "pres": "Bilinmiyor",
+                    "termin": pd.NaT,
+                    "termin_hafta": pd.NA,
+                }
+                for col, default_value in optional_defaults.items():
+                    if col not in cached.columns:
+                        cached[col] = default_value
                 return cached
+    
         except Exception:
             pass
     
@@ -181,56 +206,18 @@ def load_excel(excel_file) -> pd.DataFrame:
 
     work = pd.DataFrame({
         "tarih": pd.to_datetime(df[tarih_col], errors="coerce", dayfirst=True),
-        "profil": df[profil_col].astype(str).str.strip(),
-        "siparis_no": df[siparis_col].astype(str).str.strip(),
+        "profil": df[profil_col].fillna("").astype(str).str.strip(),
+        "siparis_no": df[siparis_col].fillna("").astype(str).str.strip(),
         "adet": pd.to_numeric(df[adet_col], errors="coerce"),
     })
 
     if musteri_col:
-        work["musteri_siparis_no"] = df[musteri_col].astype(str).str.strip()
-    
-        MUSTERI_MAP = {
-            "MAGAZA": "MERKEZ MAĞAZA",
-            "MAĞAZA": "MERKEZ MAĞAZA",
-        }
-    
-        def normalize_musteri(x):
-            x = str(x).strip().upper()
-            return MUSTERI_MAP.get(x, x)
-    
-        work["musteri_siparis_no"] = work["musteri_siparis_no"].apply(normalize_musteri)
-        # 🔥 MAPPING UYGULA
-        MAPPING_FILE = "./musteri_mapping.json"
-        
-        def load_mapping():
-            if os.path.exists(MAPPING_FILE):
-                with open(MAPPING_FILE, "r") as f:
-                    return json.load(f)
-            return {}
-        
-        user_mapping = load_mapping()
-
-        auto_mapping, groups = auto_generate_mapping(work)
-        
-        # 🔥 USER mapping öncelikli
-        final_mapping = {}
-        
-        for k, v in auto_mapping.items():
-            final_mapping[k.lower()] = v
-        
-        for k, v in user_mapping.items():
-            final_mapping[k.lower()] = v
-        
-        work["ANA_MUSTERI"] = work["musteri_siparis_no"].apply(
-            lambda x: final_mapping.get(x.lower(), x)
-        )
-        
+        work["musteri_siparis_no"] = df[musteri_col].apply(normalize_musteri_value)
     else:
         work["musteri_siparis_no"] = ""
-        work["ANA_MUSTERI"] = ""
-
+        
     if firma_col:
-        work["firma_adi"] = df[firma_col].astype(str).str.strip()
+        work["firma_adi"] = df[firma_col].fillna("").astype(str).str.strip()
     else:
         work["firma_adi"] = ""
 
@@ -240,7 +227,8 @@ def load_excel(excel_file) -> pd.DataFrame:
         work["kg"] = 0
     # PRES
     if pres_col:
-        work["pres"] = df[pres_col].astype(str).str.strip()
+        work["pres"] = df[pres_col].fillna("").astype(str).str.strip()
+        work["pres"] = work["pres"].replace("", "Bilinmiyor")
     else:
         work["pres"] = "Bilinmiyor"
     
@@ -256,7 +244,11 @@ def load_excel(excel_file) -> pd.DataFrame:
     else:
         work["termin_hafta"] = None    
         
-    work = work.dropna(subset=["tarih", "profil", "siparis_no", "adet"]).copy()
+    work = work.dropna(subset=["tarih", "adet"]).copy()
+    work = work[
+        work["profil"].astype(str).str.strip().ne("") &
+        work["siparis_no"].astype(str).str.strip().ne("")
+    ].copy()
     work = work[(work["adet"] >= 1) & (work["adet"] <= 100000)]
     work["adet"] = work["adet"].astype(int)
     work["yil"] = work["tarih"].dt.year.astype(int)
@@ -268,10 +260,8 @@ def load_excel(excel_file) -> pd.DataFrame:
     
     return work
 
-def filter_data(df: pd.DataFrame, secilen_boy: int, mod: str, yillar: Iterable[int], profil_ara: str = "") -> pd.DataFrame:
+def filter_data(df: pd.DataFrame, secilen_boy: int, mod: str, profil_ara: str = "") -> pd.DataFrame:
     filtered = df.copy()
-    if yillar:
-        filtered = filtered[filtered["yil"].isin([int(str(y)) for y in yillar])]
 
     if mod == "Seçilen boy ve altı":
         filtered = filtered[filtered["adet"] <= secilen_boy]
@@ -281,6 +271,7 @@ def filter_data(df: pd.DataFrame, secilen_boy: int, mod: str, yillar: Iterable[i
     profil_ara = (profil_ara or "").strip().upper()
     if profil_ara:
         filtered = filtered[filtered["profil"].str.upper().str.contains(profil_ara, na=False)]
+
     return filtered
 
 
@@ -298,19 +289,43 @@ def filter_scope_data(df: pd.DataFrame, yillar: Iterable[int], profil_ara: str =
 
 
 def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFrame:
+    if filtered.empty:
+        return pd.DataFrame(columns=[
+            "Boy", "Toplam Sipariş Kalemi", "Farklı Sipariş Sayısı",
+            "Farklı Profil Sayısı", "Toplam Üretilen Boy", "Toplam Kg"
+        ])
+
+    grouped = filtered.groupby("adet").agg(
+        toplam_satir=("siparis_no", "size"),
+        farkli_siparis=("siparis_no", pd.Series.nunique),
+        farkli_profil=("profil", pd.Series.nunique),
+        toplam_boy=("adet", "sum"),
+        toplam_kg=("kg", "sum"),
+    ).reset_index()
+
     rows = []
+    grouped_map = {int(row["adet"]): row for _, row in grouped.iterrows()}
 
     for boy in range(secilen_boy, 0, -1):
-        part = filtered[filtered["adet"] == boy]
-
-        rows.append({
-            "Boy": boy,
-            "Toplam Sipariş Kalemi": int(len(part)),
-            "Farklı Sipariş Sayısı": int(part["siparis_no"].nunique()),
-            "Farklı Profil Sayısı": int(part["profil"].nunique()),
-            "Toplam Üretilen Boy": int(part["adet"].sum()) if not part.empty else 0,
-            "Toplam Kg": float(round(part["kg"].fillna(0).sum(), 2)),
-        })
+        row = grouped_map.get(boy)
+        if row is None:
+            rows.append({
+                "Boy": boy,
+                "Toplam Sipariş Kalemi": 0,
+                "Farklı Sipariş Sayısı": 0,
+                "Farklı Profil Sayısı": 0,
+                "Toplam Üretilen Boy": 0,
+                "Toplam Kg": 0.0,
+            })
+        else:
+            rows.append({
+                "Boy": boy,
+                "Toplam Sipariş Kalemi": int(row["toplam_satir"]),
+                "Farklı Sipariş Sayısı": int(row["farkli_siparis"]),
+                "Farklı Profil Sayısı": int(row["farkli_profil"]),
+                "Toplam Üretilen Boy": int(row["toplam_boy"]),
+                "Toplam Kg": float(round(row["toplam_kg"], 2)),
+            })
 
     return pd.DataFrame(rows)
 
@@ -360,8 +375,8 @@ def build_profile_summary(filtered: pd.DataFrame, hedef_uretim: int) -> pd.DataF
     )
 
     profile["siparis_basina_ortalama_boy"] = (
-        profile["toplam_uretilen_boy"] / profile["farkli_siparis_sayisi"]
-    ).round(2)
+        profile["toplam_uretilen_boy"] / profile["farkli_siparis_sayisi"].replace(0, pd.NA)
+    ).round(2).fillna(0)
 
     profile["ilk_tarih"] = profile["ilk_tarih"].dt.strftime("%Y-%m-%d")
     profile["son_tarih"] = profile["son_tarih"].dt.strftime("%Y-%m-%d")
@@ -419,8 +434,8 @@ def build_high_volume_profile_summary(scope_df: pd.DataFrame, min_boy: int, hede
     )
 
     profile["siparis_basina_ortalama_boy"] = (
-        profile["toplam_uretilen_boy"] / profile["farkli_siparis_sayisi"]
-    ).round(2)
+        profile["toplam_uretilen_boy"] / profile["farkli_siparis_sayisi"].replace(0, pd.NA)
+    ).round(2).fillna(0)
 
     profile["ilk_tarih"] = profile["ilk_tarih"].dt.strftime("%Y-%m-%d")
     profile["son_tarih"] = profile["son_tarih"].dt.strftime("%Y-%m-%d")
@@ -654,7 +669,7 @@ def build_high_volume_raw(scope_df: pd.DataFrame, min_boy: int) -> pd.DataFrame:
     if filtered.empty:
         return pd.DataFrame(columns=["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"])
 
-    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "ANA_MUSTERI", "profil", "adet", "kg"]
+    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("adet", ascending=False).copy()
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
     return raw.head(500)
@@ -799,10 +814,13 @@ def build_profit_simulation(scope_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # Ortalama sipariş büyüklüğü
-    df["ort_boy"] = (df["toplam_adet"] / df["siparis_sayisi"]).round(2)
-
-    # Yoğunluk skoru (çok sipariş ama küçükse kötü)
-    df["yogunluk_skor"] = (df["satir_sayisi"] / df["toplam_adet"]).round(4)
+    df["ort_boy"] = (
+        df["toplam_adet"] / df["siparis_sayisi"].replace(0, pd.NA)
+    ).round(2).fillna(0)
+    
+    df["yogunluk_skor"] = (
+        df["satir_sayisi"] / df["toplam_adet"].replace(0, pd.NA)
+    ).round(4).fillna(0)
 
     # Basit değer skoru
     df["deger_skor"] = (df["toplam_adet"] * df["ort_boy"]).round(2)
@@ -838,43 +856,32 @@ def build_profit_simulation(scope_df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-def build_customer_merge_table(df):
-
-    groups = load_merge_map()
-
-    if groups is None:
-        groups = group_customers(df)
-        save_merge_map(groups)
-
-    rows = []
-
-    for key, vals in groups.items():
-        unique_vals = list(set(vals))
-
-        rows.append({
-            "Ana Musteri": key,
-            "Farkli Yazim": len(unique_vals),
-            "Toplam Siparis": len(vals),
-            "Ornekler": ", ".join(unique_vals[:3])
-        })
-
-    return pd.DataFrame(rows).sort_values("Toplam Siparis", ascending=False)
-
 # =========================
 # 👤 CUSTOMER ENGINE
 # =========================
 def build_customer_detail(scope_df: pd.DataFrame, musteri_adi: str, secilen_boy: int):
+    musteri_adi = str(musteri_adi).strip().upper()
+    mapping = load_customer_mapping()
+    grup_listesi = get_customer_group_list(mapping, musteri_adi)
 
-    df = scope_df[scope_df["ANA_MUSTERI"] == musteri_adi].copy()
+    if not grup_listesi:
+        return pd.DataFrame(), "Veri bulunamadı"
+
+    df = scope_df[
+        scope_df["musteri_siparis_no"].astype(str).str.upper().isin(grup_listesi)
+    ].copy()
 
     if df.empty:
-        return pd.DataFrame(), "Veri bulunamadı"
+        return pd.DataFrame(), f"Seçilen müşteri grubu için kayıt bulunamadı.\n\nGrup: {musteri_adi}"
 
     toplam_satir = len(df)
     toplam_adet = int(df["adet"].sum())
+    toplam_kg = float(df["kg"].fillna(0).sum())
+    farkli_siparis = int(df["siparis_no"].nunique())
+    farkli_profil = int(df["profil"].nunique())
 
-    kucuk = df[df["adet"] <= secilen_boy]
-    buyuk = df[df["adet"] > secilen_boy]
+    kucuk = df[df["adet"] <= secilen_boy].copy()
+    buyuk = df[df["adet"] > secilen_boy].copy()
 
     kucuk_satir = len(kucuk)
     buyuk_satir = len(buyuk)
@@ -888,44 +895,59 @@ def build_customer_detail(scope_df: pd.DataFrame, musteri_adi: str, secilen_boy:
     kucuk_adet_oran = (kucuk_adet / toplam_adet * 100) if toplam_adet else 0
     buyuk_adet_oran = (buyuk_adet / toplam_adet * 100) if toplam_adet else 0
 
-    # 📊 tablo
     summary_df = pd.DataFrame([
-        ["Toplam Sipariş", toplam_satir],
-        ["Toplam Üretim (Boy)", toplam_adet],
-        ["Küçük Sipariş (adet)", kucuk_satir],
-        ["Büyük Sipariş (adet)", buyuk_satir],
-        ["Küçük Sipariş (%)", round(kucuk_oran,1)],
-        ["Büyük Sipariş (%)", round(buyuk_oran,1)],
-        ["Küçük Üretim (%)", round(kucuk_adet_oran,1)],
-        ["Büyük Üretim (%)", round(buyuk_adet_oran,1)],
+        ["Seçilen Müşteri Grubu", musteri_adi],
+        ["Gruptaki Alt Kayıt Sayısı", len(grup_listesi)],
+        ["Toplam Sipariş Kalemi", toplam_satir],
+        ["Farklı Sipariş Sayısı", farkli_siparis],
+        ["Farklı Profil Sayısı", farkli_profil],
+        ["Toplam Üretilen Boy", toplam_adet],
+        ["Toplam Kg", round(toplam_kg, 2)],
+        [f"{secilen_boy} Boy ve Altı Sipariş Kalemi", kucuk_satir],
+        [f"{secilen_boy} Boy Üstü Sipariş Kalemi", buyuk_satir],
+        [f"{secilen_boy} Boy ve Altı Üretim", kucuk_adet],
+        [f"{secilen_boy} Boy Üstü Üretim", buyuk_adet],
+        [f"{secilen_boy} Boy ve Altı Sipariş (%)", round(kucuk_oran, 1)],
+        [f"{secilen_boy} Boy Üstü Sipariş (%)", round(buyuk_oran, 1)],
+        [f"{secilen_boy} Boy ve Altı Üretim (%)", round(kucuk_adet_oran, 1)],
+        [f"{secilen_boy} Boy Üstü Üretim (%)", round(buyuk_adet_oran, 1)],
     ], columns=["Metrik", "Değer"])
 
-    # 🧠 yorum motoru
     if kucuk_oran > 50:
-        yorum = "❌ Çok fazla küçük sipariş → müşteriyi toplu siparişe zorla"
+        yorum = f"❌ Bu müşteri grubunda {secilen_boy} boy ve altı sipariş yükü yüksek."
     elif kucuk_oran > 25:
-        yorum = "⚠️ Siparişler bölünüyor → birleştirme öner"
+        yorum = f"⚠️ Bu müşteri grubunda {secilen_boy} boy ve altı sipariş yoğunluğu dikkat çekiyor."
     else:
-        yorum = "✅ Müşteri verimli çalışıyor"
+        yorum = f"✅ Bu müşteri grubu {secilen_boy} boy eşiğine göre daha dengeli çalışıyor."
 
     detay_text = f"""
-## 👤 Müşteri Analizi: {musteri_adi}
-
-- Toplam sipariş: **{toplam_satir}**
-- Toplam üretim: **{toplam_adet} boy**
-
-### 🔻 Küçük Sipariş
-- {kucuk_satir} adet (%{kucuk_oran:.1f})
-- {kucuk_adet} boy (%{kucuk_adet_oran:.1f})
-
-### 🔺 Büyük Sipariş
-- {buyuk_satir} adet (%{buyuk_oran:.1f})
-- {buyuk_adet} boy (%{buyuk_adet_oran:.1f})
-
-### 🎯 Yorum
-{yorum}
-"""
-
+    ## 👤 Müşteri Analizi: {musteri_adi}
+    
+    ### Grup Kapsamı
+    {", ".join(grup_listesi[:50])}
+    
+    ### Özet
+    - Toplam sipariş kalemi: **{toplam_satir}**
+    - Farklı sipariş: **{farkli_siparis}**
+    - Farklı profil: **{farkli_profil}**
+    - Toplam üretim: **{toplam_adet} boy**
+    - Toplam kg: **{toplam_kg:,.2f}**
+    
+    ### {secilen_boy} Boy ve Altı
+    - **{kucuk_satir}** sipariş kalemi
+    - **{kucuk_adet} boy**
+    - Sipariş oranı: **%{kucuk_oran:.1f}**
+    - Üretim oranı: **%{kucuk_adet_oran:.1f}**
+    
+    ### {secilen_boy} Boy Üstü
+    - **{buyuk_satir}** sipariş kalemi
+    - **{buyuk_adet} boy**
+    - Sipariş oranı: **%{buyuk_oran:.1f}**
+    - Üretim oranı: **%{buyuk_adet_oran:.1f}**
+    
+    ### 🎯 Yorum
+    {yorum}
+    """
     return summary_df, detay_text
 
 # =========================
@@ -937,7 +959,11 @@ def build_root_cause(scope_df: pd.DataFrame, secilen_boy: int):
     if kucuk.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    musteri = kucuk.groupby("ANA_MUSTERI").agg(
+    kucuk_musteri = kucuk[
+        kucuk["musteri_siparis_no"].astype(str).str.strip().ne("")
+    ].copy()
+    
+    musteri = kucuk.groupby("musteri_siparis_no").agg(
         siparis=("siparis_no", "count"),
         toplam=("adet", "sum")
     ).sort_values("siparis", ascending=False).head(10)
@@ -955,30 +981,12 @@ def build_root_cause(scope_df: pd.DataFrame, secilen_boy: int):
     return musteri, profil, pres
 
 # =========================
-# 🎯 AKSİYON MOTORU
-# =========================
-def build_action_engine(root_musteri_df, root_profil_df):
-    aksiyonlar = []
-
-    for row in root_musteri_df.head(3).itertuples():
-        aksiyonlar.append(
-            f"👉 {row.Index} müşterisi küçük sipariş üretiyor → sipariş birleştirme öner"
-        )
-
-    for row in root_profil_df.head(3).itertuples():
-        aksiyonlar.append(
-            f"👉 {row.Index} profil düşük adetli → stok veya min sipariş limiti koy"
-        )
-
-    return aksiyonlar
-
-# =========================
 # 📈 FORECAST ENGINE
 # =========================
 def build_forecast_table(scope_df: pd.DataFrame) -> pd.DataFrame:
     if scope_df.empty:
         return pd.DataFrame(columns=[
-            "ay", "toplam_adet", "forecast_3_ay_ort", "sapma"
+            "ay", "toplam_adet", "hareketli_ortalama_tahmin", "sapma"
         ])
 
     monthly = scope_df.copy()
@@ -1014,7 +1022,7 @@ def forecast_chart(forecast_df: pd.DataFrame):
         x="ay",
         y=["toplam_adet", "forecast_3_ay_ort"],
         markers=True,
-        title="Forecast Engine - Gerçekleşen ve 3 Aylık Tahmin",
+        title="Aylık Gerçekleşen ve 3 Aylık Hareketli Ortalama",
     )
     fig.update_layout(height=420)
     return fig
@@ -1035,7 +1043,7 @@ def build_scenario_table(scope_df: pd.DataFrame, secilen_boy: int, hedef_kucuk_o
 
     mevcut_kucuk_oran = (kucuk_satir / toplam_satir * 100) if toplam_satir else 0
     hedef_oran = float(hedef_kucuk_oran)
-    agresif_oran = max(hedef_oran - 3, 1)
+    agresif_oran = max(1, min(hedef_oran - 3, hedef_oran))
 
     kalip_degisim_sayisi = kucuk.groupby("siparis_no")["profil"].nunique().sum()
     mevcut_kalip_suresi = float(kalip_degisim_sayisi)  # 1 sipariş/profil geçişi = 1 saat varsayımı
@@ -1085,7 +1093,7 @@ def scenario_summary_markdown(scope_df: pd.DataFrame, secilen_boy: int, hedef_ku
 
     mevcut_oran = (kucuk_satir / toplam_satir * 100) if toplam_satir else 0
     hedef_oran = float(hedef_kucuk_oran)
-    agresif_oran = max(hedef_oran - 3, 1)
+    agresif_oran = max(1, min(hedef_oran - 3, hedef_oran))
 
     kalip_degisim_sayisi = kucuk.groupby("siparis_no")["profil"].nunique().sum()
 
@@ -1154,7 +1162,7 @@ def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
     ]
     return "\n".join(lines)
 
-def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_uretim, hedef_kucuk_oran):
+def build_executive_summary(scope_df, abc_df, secilen_boy, hedef_kucuk_oran):
     if scope_df.empty:
         return "### Veri bulunamadı"
 
@@ -1202,17 +1210,16 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     # MÜŞTERİ ANALİZİ (musteri_siparis_no bazlı)
     musteri_df = scope_df.copy()
     
-    musteri_df["ANA_MUSTERI"] = musteri_df["ANA_MUSTERI"].astype(str).str.strip()
+    musteri_df["musteri_siparis_no"] = musteri_df["musteri_siparis_no"].astype(str).str.strip()
     
-    # boş ve hatalı kayıtları temizle
     musteri_df = musteri_df[
-        (musteri_df["ANA_MUSTERI"] != "") &
-        (musteri_df["ANA_MUSTERI"] != "0") &
-        (musteri_df["ANA_MUSTERI"].notna())
+        (musteri_df["musteri_siparis_no"] != "") &
+        (musteri_df["musteri_siparis_no"] != "0") &
+        (musteri_df["musteri_siparis_no"].notna())
     ]
     
     musteri = (
-        musteri_df.groupby("ANA_MUSTERI")
+        musteri_df.groupby("musteri_siparis_no")
         .agg(
             siparis=("siparis_no", "count"),
             toplam=("adet", "sum"),
@@ -1326,7 +1333,7 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
     for i, row in enumerate(musteri.reset_index().itertuples(), 1):
         yuzde = (row.toplam / toplam_adet * 100) if toplam_adet else 0
         lines.append(
-            f"{i}. {row.ANA_MUSTERI} → {int(row.siparis)} sipariş | "
+            f"{i}. {row.musteri_siparis_no} → {int(row.siparis)} sipariş | "
             f"{int(row.toplam)} boy | %{yuzde:.1f} üretim"
         )
 
@@ -1337,7 +1344,7 @@ def build_executive_summary(scope_df, filtered, abc_df, secilen_boy, hedef_ureti
         if i > 5:
             break
         lines.append(
-            f"{i}. {row.ANA_MUSTERI} → {int(row.siparis)} sipariş (küçük sipariş kaynağı)"
+            f"{i}. {row.musteri_siparis_no} → {int(row.siparis)} sipariş (küçük sipariş kaynağı)"
         )
 
     lines.append("")
@@ -1646,7 +1653,6 @@ def load_customer_detail(musteri, excel_file, secilen_boy, mod, yillar, profil_a
     df = load_excel(excel_file)
 
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
-
     scope_df = filter_scope_data(df, selected_years, profil_ara)
 
     return build_customer_detail(scope_df, musteri, int(secilen_boy))
@@ -1734,18 +1740,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
 
     scope_df = filter_scope_data(df, selected_years, profil_ara)
-    _, groups = auto_generate_mapping(scope_df)
     
-    rows = []
-    for key, vals in groups.items():
-        rows.append({
-            "Ana Musteri": key,
-            "Farkli Yazim": len(set(vals)),
-            "Tum Isimler": ", ".join(set(vals))
-        })
-    
-    merge_df = pd.DataFrame(rows).sort_values("Farkli Yazim", ascending=False)
-    filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
+    filtered = filter_data(scope_df, int(secilen_boy), mod, "")
 
     hedef_uretim = int(hedef_uretim)
     top_n_value = int(top_n_sec)
@@ -1765,7 +1761,6 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     abc_md = abc_summary_markdown(abc_df)
     profit_df = build_profit_simulation(scope_df)
     root_musteri_df, root_profil_df, root_pres_df = build_root_cause(scope_df, int(secilen_boy))
-    aksiyonlar = build_action_engine(root_musteri_df, root_profil_df)
     dashboard_kpi_df = build_dashboard_kpis(scope_df)
     dashboard_monthly_df = build_dashboard_monthly(scope_df)
     dashboard_top_profiles_df = build_dashboard_top_profiles(scope_df, top_n=15)
@@ -1777,24 +1772,21 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     scenario_df = build_scenario_table(scope_df, int(secilen_boy), hedef_kucuk_oran)
     scenario_md = scenario_summary_markdown(scope_df, int(secilen_boy), hedef_kucuk_oran)
     
-    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "ANA_MUSTERI", "profil", "adet", "kg"]
+    raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
 
     profile_list = profile_df["Profil Kodu"].tolist() if not profile_df.empty else []
-    musteri_list = sorted([
-        x for x in scope_df["ANA_MUSTERI"].dropna().unique().tolist()
-        if str(x).strip() != ""
-    ])
+    
+    customer_mapping = load_customer_mapping()
+    musteri_list = sorted(customer_mapping.keys())
     exec_summary = build_executive_summary(
         scope_df,
-        filtered,
         abc_df,
         int(secilen_boy),
-        hedef_uretim,
         hedef_kucuk_oran
     )
-    
+
     return (
         summary_small_text,
         boy_df,
@@ -1836,8 +1828,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         forecast_df,
         forecast_chart(forecast_df),
         scenario_md,
-        scenario_df,
-        merge_df
+        scenario_df
     )
 
 
@@ -1971,12 +1962,6 @@ with gr.Blocks(
                 
                     musteri_ozet = gr.Dataframe(label="Müşteri Özeti")
                     musteri_yorum = gr.Markdown()
-
-                with gr.Tab("🧩 Müşteri Birleştirme"):
-                
-                    gr.Markdown("## 🧠 Otomatik Müşteri Gruplama")
-                
-                    merge_table = gr.Dataframe(label="Gruplanmış Müşteriler")
 
                 with gr.Tab("📊 Yönetim Dashboard"):
                     gr.Markdown("## 📊 Yönetim Dashboard")
@@ -2115,8 +2100,7 @@ with gr.Blocks(
             forecast_table,
             forecast_plot,
             scenario_md_box,
-            scenario_table,
-            merge_table
+            scenario_table
         ],
     )
 
