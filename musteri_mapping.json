@@ -1,1 +1,2116 @@
-{}
+{
+  "ADA_YAPI": [
+    "ADA YAPI BİRCAN"
+  ],
+  "AHMET_TIRAŞ": [
+    "AHMET TIRAŞ",
+    "AHMET TIRAŞ ACİL",
+    "AHMET TIRAŞ YENİ KALIPLAR"
+  ],
+  "AHMET_TRAS": [
+    "AHMET TRAS ÖZGÜR YAPI"
+  ],
+  "AKGRUP": [
+    "AKGRUP",
+    "AKGRUP ACİL"
+  ],
+  "AKINCI_CAM": [
+    "AKINCI CAM"
+  ],
+  "AKSAN_MOBİLYA": [
+    "AKSAN MOBİLYA"
+  ],
+  "ALATTİN_BİLGİÇ": [
+    "ALATTİN BİLGİÇ",
+	"ALAATTİN NEŞE",
+	"BİLGİÇ"
+  ],
+  "ALBOND": [
+    "ALBOND ACİLL",
+    "ALBOND L ACİL"
+  ],
+  "ALİ_KEMAL": [
+    "ALİ KEMAL",
+    "ALİKEMAL",
+    "ALİKEMAL ÇORLU"
+  ],
+  "ALMANYA_FDT62": [
+    "ALMANYA FDT62"
+  ],
+  "ALTECH": [
+    "ALTECH ACİLL",
+	"ALTECK",
+    "ALTECK ACİL",
+    "ALTECK CEPHE",
+    "ALTECK FEYYAZ"
+  ],
+  "ALUES": [
+    "ALUES",
+    "ALUES MURAT İZMİR",
+    "ALUES 38 CEPHE",
+    "ALUES ACİL",
+    "ALUES ACİLL",
+    "ALUES C60",
+    "ALUES CAN",
+    "ALUES ÇAĞLAR SARAL",
+    "ALUES EKSİK ACİL",
+    "ALUES FATİH",
+    "ALUES FATİH 3",
+    "ALUES FATİH 4",
+    "ALUES FATİH PROJESİ",
+    "ALUES FATİH SENAS",
+    "ALUES HASAN",
+    "ALUES HATAY PROJESİ",
+    "ALUES LS60",
+    "ALUES LS60&TH78",
+    "ALUES MERMERLİ OKUL",
+    "ALUES METAL TH55",
+    "ALUES MURAT",
+    "ALUES SEDEF",
+    "ALUES SEDEF CAM",
+    "ALUES SEDEF PLASTİK",
+    "ALUES SL28",
+    "ALUES STOK",
+    "ALUES STOK 02",
+    "ALUES STOK ACİL",
+    "ALUES SÜRMENE",
+    "ALUES TEAM YAPI ACİL",
+    "ALUES TEMA",
+    "ALUES TEMA 2",
+    "ALUES TEMA YAPI",
+    "ALUES TOKİ",
+    "ALUES TOKİ İLAVE",
+    "ALUES TRABZON",
+    "ALUES UMUT",
+    "ALUES VEFA YAPI"
+  ],
+  "ANADOLU_İNŞAAT": [
+    "ANADOLU İNŞAAT ORDU"
+  ],
+  "ANKARA": [
+    "ANKARA HASTANE NMUNE",
+    "ANKARA MAĞAZA İÇİN FASON",
+    "ANKARA ŞUBE İÇİN STOK"
+  ],
+  "ARCUS": [
+    "ARCUS 1.2.3. İÇ DIŞ",
+    "ARCUS HOTEL KÜPEŞTE",
+    "ARCUS İLAVE",
+    "ARCUS OTEL ZEMİN KAT"
+  ],
+  "ARTI": [
+    "ARTI ARTAŞ ŞİŞLİ",
+    "ARTI CEPHE",
+    "ARTI CEPHE ACİL",
+    "ARTI CEPHE B BLOK",
+    "ARTI CEPHE BEKİR",
+    "ARTI CEPHE ÇORLU 380-6",
+    "ARTI CEPHE EKO CENTE",
+    "ARTI CEPHE EKOSANABC",
+    "ARTI CEPHE F BLOK",
+    "ARTI F-G BLOK EK",
+    "ARTI İFM SÜRME",
+    "ARTI İN B BLOK ZEMİN",
+    "ARTI İNS TERAS ACİL",
+    "ARTI İNŞ",
+    "ARTI İNŞ ARTAŞ ŞİŞLİ",
+    "ARTI İNŞ EKOSAN",
+    "ARTI İNŞ EKOSAN H",
+    "ARTI İNŞ EKOSAN H BLOK",
+    "ARTI İNŞ EKOSAN I BLOK",
+    "ARTI İNŞ G BLOK 1.",
+    "ARTI İNŞ G BLOK 2.",
+    "ARTI İNŞ G BLOK 3.",
+    "ARTI İNŞ GİRİŞ TAG",
+    "ARTI İNŞ GÜVENLİK KULUBESİ",
+    "ARTI İNŞ İFM C60",
+    "ARTI İNŞ İFM CEPHE",
+    "ARTI İNŞ İFM D BLOK",
+    "ARTI İNŞ MENFEZ",
+    "ARTI İNŞ MENFEZ İFM2",
+    "ARTI İNŞ MERDİVENKÖY",
+    "ARTI İNŞ SOSYALTESİS",
+    "ARTI İNŞ ÜRGÜPLÜ APT",
+    "ARTI İNŞ. ACİL"
+  ],
+  "ARZEN": [
+    "ARZEN",
+    "ARZEN İLAVE",
+    "ARZEN İLAVE OKUL",
+    "ARZEN İNŞ",
+    "ARZEN İNŞ FASON",
+    "ARZEN İNŞ OKUL PROJE",
+    "ARZEN KIZILPINAR",
+    "ARZEN OKUL 2 ACİL",
+    "ARZEN TH62"
+  ],
+  "ASD": [
+    "ASD",
+    "ASD 3 NİSAN EMNT",
+    "ASD 5000LER OKUL",
+    "ASD ACİL",
+    "ASD ACİLL",
+    "ASD ACİLLL",
+    "ASD ACİLLLL",
+    "ASD ACİLLLLL",
+    "ASD AÇILIŞ",
+    "ASD ADLİYE ACİLL",
+    "ASD ANDAÇ AKÇAY",
+    "ASD BARTIN",
+    "ASD BARTIN IŞIK OTEL",
+    "ASD BARTIN IŞIKLAR",
+    "ASD BİLGİNLER İNŞAAT",
+    "ASD BNB İNŞAAT",
+    "ASD BURDUR ACİL",
+    "ASD BURDUR HELKA",
+    "ASD CANGÜL ACİL",
+    "ASD CANGÜLLER",
+    "ASD DADIBRA SL38T",
+    "ASD DADİBRA",
+    "ASD DEMİR ÇELİK SİTESİ",
+    "ASD EKSİK KALAN ACİL",
+    "ASD ESKİPAZAR",
+    "ASD EZGİ SİTESİ",
+    "ASD FASON KAPLAMA",
+    "ASD FERHAT CANGÜL",
+    "ASD FİLYOS",
+    "ASD FİLYOS PROJESİ",
+    "ASD HELKA",
+    "ASD HELKA ACİL",
+    "ASD HELKA ACİLLL",
+    "ASD KARABUK",
+    "ASD KARABUK ACİL",
+    "ASD KARABÜK",
+    "ASD KARABÜK ERKUL",
+    "ASD KARABÜK KENT MEYDANI",
+    "ASD KARABÜK TERMİNAL",
+    "ASD KAROTO C60",
+    "ASD KAROTO CEPHE",
+    "ASD KAROTO TH55",
+    "ASD KENT MEYDANI",
+    "ASD KUZEY PASTANESİ",
+    "ASD KÜPEŞTE DEVLET İŞİ",
+    "ASD MANİSA SARUHANLI",
+    "ASD MERTCAN",
+    "ASD MERTCAN ACİLL",
+    "ASD OFİS BİNASI",
+    "ASD OFİS BÖLME",
+    "ASD ÖMER",
+    "ASD PARK DİAMOND",
+    "ASD PROJE NUMUNE ACİL",
+    "ASD SİP",
+    "ASD SL32 ACİL",
+    "ASD SL32 DADIBRA",
+    "ASD SL32 FASON",
+    "ASD SONER",
+    "ASD TERMİNAL",
+    "ASD TM55",
+    "ASD ULUS ADLİYE",
+    "ASD UYGAR",
+    "ASD UZUNER",
+    "ASD VERANO",
+    "ASD VERONA SL38T",
+    "ASD YAŞ ALMA SOSYAL TESİS",
+    "ASD YESİLYURT",
+    "ASD YEŞİLYURT",
+    "ASD YILMAZ BETON",
+    "ASD ZALİFRE",
+    "ASD ZALİFRE DADİBRA",
+    "ASD ZALİFRE OTEL",
+    "ASD ZALİFRE OTEL1",
+    "ASD ZONGULDAK"
+  ],
+  "ASHIL_DESING": [
+    "ASHIL DESING"
+  ],
+  "ATA_ALM": [
+    "ATA ALM ACİL",
+    "ATA ALM ACİLL",
+    "ATA ALM MURAT"
+  ],
+  "ATABERK_ALM": [
+    "ATABERK ALM"
+  ],
+  "ATAKAN_ERSİN": [
+    "ATAKAN ERSİN ÇORLU"
+  ],
+  "AVN_UMUT": [
+    "AVN UMUT"
+  ],
+  "AYDINBEY": [
+    "AYDINBEY HOTEL"
+  ],
+  "AYDINLI": [
+    "AYDINLI İDRİS TH62",
+    "AYDINLI İLAVE",
+	"aydınlı"
+  ],
+  "B_FLOVER": [
+    "B FLOVER 1",
+    "B FLOVER 2"
+  ],
+  "BABADAĞ": [
+    "BABADAĞ",
+    "BABADAĞ ACİL",
+    "BABADAĞ ACİLLLL",
+    "BABADAĞ ALÜMİNYUM"
+  ],
+  "BANDIRMA": [
+    "BANDIRMA NUMUNE"
+  ],
+  "BAŞAK_ALM": [
+    "BAŞAK ALM"
+  ],
+  "BAYA_YAPI": [
+    "BAYA YAPI ALİKEMAL",
+    "BAYA YAPI ÇORLU",
+	"BAYAYAPI İHRAÇ"
+  ],
+  "BAYKAN_ALM": [
+    "BAYKAN ALM",
+	"BAYKAN FASON"
+  ],
+  "BERBEROĞLU": [
+    "BERBEROĞLU",
+    "BERBEROĞLU FASON"
+  ],
+  "BERKAN": [
+    "BERKAN",
+    "BERKAN 12-38",
+    "BERKAN ACİL",
+    "BERKAN ACİL STOK",
+    "BERKAN MAĞAZA ACİL",
+    "BERKAN MAĞAZA ACİLL",
+    "BERKAN MAĞAZA ACİLLL",
+    "BERKAN MAĞAZA K.TUBA",
+    "BERKAN MAĞAZA STOK",
+    "BERKAN OFİS BÖLME",
+    "BERKAN STOK ACİL",
+    "BERKAN STOK ACİLL",
+    "BERKAN3",
+    "BERKANN",
+    "BERKANT",
+    "berkant",
+    "BERKANTT",
+    "BERKANTTT",
+    "berkanttt"
+  ],
+  "BETSAN": [
+    "BETSAN ACİL"
+  ],
+  "BORA": [
+    "BORA",
+    "BORA ACİL",
+    "BORA-ZAİMOĞLU ACİLLL"
+  ],
+  "BOSNA": [
+    "BOSNA DIŞ TİC",
+    "BOSNA DIŞ TİCARET"
+  ],
+  "BOULEVARD": [
+    "BOULEVARD SİNPAŞ - PİDOSAN"
+  ],
+  "BRN_YAPI": [
+    "BRN YAPI",
+    "BRN ZEKERİYA KÖY"
+  ],
+  "BURAK_EKSEN": [
+    "BURAK EKSEN ALM",
+	"EKSEN BURAK",
+    "EKSEN ELOKSAL FASON"
+  ],
+  "BURGAZ": [
+    "BAYRAM ALİ BEY",
+    "BURGAZ",
+    "BURGAZ  GENÇLER SİNEKLİK",
+    "BURGAZ  YAĞMUR",
+    "BURGAZ 8MM C.B",
+    "BURGAZ AB130T",
+    "BURGAZ ACİL",
+    "BURGAZ ACİLL",
+    "BURGAZ ACİLL EDİZ",
+    "BURGAZ ALBAYRAK KARDES",
+    "BURGAZ ALİ BEY",
+    "BURGAZ ALİ BEYY",
+    "BURGAZ ASEL",
+    "BURGAZ ASEL ALM",
+    "BURGAZ ATABERK",
+    "BURGAZ ATABERK ALM",
+    "BURGAZ AYBERK",
+    "BURGAZ BAYRAM ALİ",
+    "BURGAZ BAYRAMALİ",
+    "BURGAZ C AJANS",
+    "BURGAZ ÇAĞ MİMARLIK",
+    "BURGAZ DURU ALM",
+    "BURGAZ EDİZ",
+    "BURGAZ EDİZ CAM",
+    "BURGAZ EDİZ CAM ACİL",
+    "BURGAZ EFOR",
+    "BURGAZ EFOR ALM",
+    "BURGAZ FASON",
+    "BURGAZ FASON ACİLL",
+    "BURGAZ FASON HAS YAPI",
+    "BURGAZ FASON İŞÇİLİK",
+    "BURGAZ FASON KAPLAMA",
+    "BURGAZ FASON KAPLAMA İŞÇİLİĞİ",
+    "BURGAZ GENCER İBŞ",
+    "BURGAZ GÖKSÜ CAM",
+    "BURGAZ HAYAL ERSOY",
+    "BURGAZ HIZIR",
+    "BURGAZ İLK YAZ REKLAM",
+    "BURGAZ İLKYAZ",
+    "BURGAZ İLKYAZ REKLAM",
+    "BURGAZ İLKYAZ REKLAMI",
+    "BURGAZ İZER PLS",
+    "BURGAZ KAPLAMA FASON",
+    "BURGAZ KARAMAN CAM BALKON",
+    "BURGAZ ONAY ALM",
+    "BURGAZ ÖNAL ALM",
+    "BURGAZ ÖZLER TAŞ",
+    "BURGAZ PİLSAN",
+    "BURGAZ PROJE 1",
+    "BURGAZ PROJE 2",
+    "BURGAZ RA VEL",
+    "BURGAZ RAVEL",
+    "BURGAZ RAVEL ALM",
+    "BURGAZ SALINER",
+    "BURGAZ SALİNER",
+    "BURGAZ SERES DIŞ TİC",
+    "BURGAZ SEREST DIŞ",
+    "BURGAZ SEREST DIŞ TİC.",
+    "BURGAZ SEREST DIŞ TİCARET",
+    "BURGAZ SEREST DIŞ TİCARET FRANSA",
+    "BURGAZ SİNEKLİK",
+    "BURGAZ TASARIM",
+    "BURGAZ TINMAZ ALM",
+    "BURGAZ TUĞRA",
+    "BURGAZ TUĞRA METAL",
+    "BURGAZ TURA METAL",
+    "BURGAZ UĞUR",
+    "BURGAZ UĞUR ALM",
+    "BURGAZ UMUT",
+    "BURGAZ UMUT 1",
+    "BURGAZ UMUT PLASTİK",
+    "BURGAZ UMUT PLASTK 2",
+    "BURGAZ UMUT PLS",
+    "BURGAZ UMUT PLS TİJ",
+    "BURGAZ UMUTT",
+    "BURGAZ UZMAN PLASTİK",
+    "BURGAZ VİZE",
+    "BURGAZ YAĞMUR",
+    "BURGAZ YAĞMUR ALM",
+    "BURGAZ YAĞMUR ALM 1",
+    "BURGAZ YAĞMUR ALM 2",
+    "BURGAZ YAĞMUR ALM 3",
+    "BURGAZ YAĞMUR BİEVON",
+    "BURGAZ YAĞMUR PEN",
+    "BURGAZ YAŞAR BEY",
+    "BURGAZ YGT ALM"
+  ],
+  "CAM_GLASS": [
+    "CAM GLASS METAL"
+  ],
+  "CAN_PLASTİK": [
+    "CAN PLASTİK",
+    "CAN PLASTİK FASON"
+  ],
+  "CENSA_PROFİL": [
+    "CENSA PROFİL"
+  ],
+  "CS_GOLD": [
+    "CS  GOLD",
+    "CS  GOLD ACİL",
+    "CS GOLD",
+    "CS GOLD  ÇAĞLAR",
+    "CS GOLD ACİL",
+    "CS GOLD ACİLL",
+    "CS GOLD CEPHE",
+    "CS GOLD DÜNDAR",
+    "CS GOLD İSTANBUL",
+    "CS GOLD SL38T"
+  ],
+  "ÇERKEZKÖY": [
+    "Ç.KÖU TUĞLU GRUP",
+    "Ç.KÖT ÖZDEMİR YAPI",
+    "Ç.KÖY ACİL",
+    "Ç.KÖY ACİL FASON",
+    "Ç.KÖY ACİLL",
+    "Ç.KÖY ADAR YAPI",
+    "Ç.KÖY ALPER CAM",
+    "Ç.KÖY ALPERCAM",
+    "Ç.KÖY ALSA ACİL",
+    "Ç.KÖY ASLAN BEY",
+    "Ç.KÖY AVSA CEPHE",
+    "Ç.KÖY BİLGİN PEN",
+    "Ç.KÖY BİLGİNPEN",
+    "Ç.KÖY BRAGON",
+    "Ç.KÖY ÇINAR",
+    "Ç.KÖY DOĞA CEPHE",
+    "Ç.KÖY DOĞA CEPHE İLAVE",
+    "Ç.KÖY EĞİLMEZ",
+    "Ç.KÖY EĞİLMEZ ACİL",
+    "Ç.KÖY EĞİLMEZ TH78",
+    "Ç.KÖY EKE YAPI",
+    "Ç.KÖY ERKAN KOÇAK",
+    "Ç.KÖY FASON",
+    "Ç.KÖY HARUN SİFİL",
+    "Ç.KÖY HARUN SİFİL ACİL",
+    "Ç.KÖY HARUN SİFİL ACİLLL",
+    "Ç.KÖY HARUN SİFİL FASON",
+    "Ç.KÖY HARUN SİPARİŞİ",
+    "Ç.KÖY HASKAR",
+    "Ç.KÖY HASKAR PEN",
+    "Ç.KÖY KADİM USTA",
+    "Ç.KÖY KOÇAK YAPI",
+    "Ç.KÖY MAUN",
+    "Ç.KÖY MESUT",
+    "Ç.KÖY MESUT FASON",
+    "Ç.KÖY MESUT PEN",
+    "Ç.KÖY MESUTPEN",
+    "Ç.KÖY MİREK",
+    "Ç.KÖY MUES YAPI",
+    "Ç.KÖY NAS PEN",
+    "Ç.KÖY NASPEN",
+    "Ç.KÖY OLGUN YAPI",
+    "Ç.KÖY ÖZAYDIN",
+    "Ç.KÖY ÖZDEMİR",
+    "Ç.KÖY ÖZKARDEŞLER",
+    "Ç.KÖY ÖZKARŞDELER",
+    "Ç.KÖY TAMHAN",
+    "Ç.KÖY TE62",
+    "Ç.KÖY TEMEL BİLGİN",
+    "Ç.KÖY TUĞLU",
+    "Ç.KÖY WLM 4",
+    "Ç.KÖY YAZICIOĞLU",
+    "Ç.KÖY YUNUS İLÇE SAĞLIK",
+    "Ç.KÖY YUNUS TİC",
+    "Ç.KÖY YUNUS TİCARET",
+    "Ç.KÖY ZAFER İNŞ",
+	"ÇERKEKÖY ÇINAR",
+	"ÇERKEZ",
+    "ÇERKEZ  HASKAR",
+    "ÇERKEZ ACİL",
+    "ÇERKEZ ACİLL",
+    "ÇERKEZ ADAR",
+    "ÇERKEZ ALPER CAM",
+    "ÇERKEZ BİLGİN",
+    "ÇERKEZ BİLGİN PEN",
+    "ÇERKEZ ÇINAR",
+    "ÇERKEZ ÇİNAR",
+    "ÇERKEZ ERKAN KOÇAK",
+    "ÇERKEZ HARUN SİFİL",
+    "ÇERKEZ MESUT",
+    "ÇERKEZ MESUT İLAVE",
+    "ÇERKEZ MESUTPEN",
+    "ÇERKEZ SERKAN",
+    "ÇERKEZ TAMHAN",
+    "ÇERKEZ TH78",
+    "ÇERKEZ UĞUR ACİL",
+	"ÇERKEZKÖY  ACİL",
+    "ÇERKEZKÖY ACİL",
+    "ÇERKEZKÖY ACİLLLL",
+    "ÇERKEZKÖY ÇINAR",
+    "ÇERKEZKÖY EĞİLMEZ",
+    "ÇERKEZKÖY MESUTPEN",
+    "ÇERKEZKÖY TAMHAN",
+	"ÇERLKEZ"
+  ],
+  "ÇANTAKÖY": [
+    "ÇANTAKÖY PROJE NUMUNE"
+  ],
+  "ÇİÇEK_YAPI": [
+    "ÇİÇEK YAPI FASON",
+	"SONER ÇİÇEK",
+    "SONER ÇİÇEK FASON"
+  ],
+  "ÇORLU MAĞAZA": [
+    "ÇORLU",
+    "ÇORLU 20-2222",
+    "ÇORLU ACİL",
+    "ÇORLU ASD",
+    "ÇORLU EYMEN",
+    "ÇORLU FASON",
+    "ÇORLU FASONN",
+    "ÇORLU OTOGAR",
+    "ÇORLU ÖZGÜR",
+    "ÇORLU UĞUR",
+	"MAGAZA",
+    "MAGAZA  SİNEKLİK SİPARİŞİ",
+    "MAGAZA 1",
+    "MAGAZA 15",
+    "MAGAZA 16",
+    "MAGAZA 9",
+    "MAGAZA ACİL",
+    "MAGAZA ACİLL",
+    "MAGAZA ACİLLL",
+    "MAGAZA ACİLLLLL",
+    "MAGAZA EN ÇOK GİDEN",
+    "MAGAZA FASON",
+    "MAGAZA HAKKI",
+    "MAGAZA KÖŞEBENT",
+    "MAGAZA SİNEKLİK",
+    "MAGAZA STOK",
+    "MAGAZA STOK 1",
+    "MAGAZA STOK 10",
+    "MAGAZA STOK 11",
+    "MAGAZA STOK 13",
+    "MAGAZA STOK 14",
+    "MAGAZA STOK 2",
+    "MAGAZA STOK 3",
+    "MAGAZA STOK 4",
+    "MAGAZA STOK 5",
+    "MAGAZA STOK 6",
+    "MAGAZA STOK 7",
+    "MAGAZA+T.DAĞ",
+	"MAĞAZA",
+    "MAĞAZA  SİNEKLİK SİPARİŞİ",
+    "MAĞAZA 1",
+    "MAĞAZA 15",
+    "MAĞAZA 16",
+    "MAĞAZA 9",
+    "MAĞAZA ACİL",
+    "MAĞAZA EN ÇOK GİDEN",
+    "MAĞAZA FASON",
+    "MAĞAZA HAKKI",
+    "MAĞAZA KÖŞEBENT",
+    "MAĞAZA SİNEKLİK",
+    "MAĞAZA STOK",
+    "MAĞAZA STOK 1",
+    "MAĞAZA STOK 10",
+    "MAĞAZA STOK 11",
+    "MAĞAZA STOK 13",
+    "MAĞAZA STOK 14",
+    "MAĞAZA STOK 2",
+    "MAĞAZA STOK 3",
+    "MAĞAZA STOK 4",
+    "MAĞAZA STOK 5",
+    "MAĞAZA STOK 6",
+    "MAĞAZA STOK 7",
+	"20 TON  STOK SİPARİŞİ",
+	"STOK"
+  ],
+  "DAĞCI": [
+    "DAĞCI ENEJİ ACİL"
+  ],
+  "DALYAN_YAPI": [
+    "DALYAN YAPI"
+  ],
+  "DEFNE_YAPI": [
+    "DEFNE YAPI FASONN"
+  ],
+  "DEKORCAM": [
+    "DEKORCAM ACİL"
+  ],
+  "DEKOTEK": [
+    "DEKOTEK"
+  ],
+  "DELTA": [
+    "DELTA İHRAÇ"
+  ],
+  "DENİZLİK": [
+    "DENİZLİK"
+  ],
+  "DEPREM": [
+    "DEPREM BÖLGESİ"
+  ],
+  "DETAY_CEPHE": [
+    "DETAY CEPHE",
+    "DETAY CEPHE HAKKI"
+  ],
+  "DİLEK_ALM": [
+    "DİLEK ALM"
+  ],
+  "DOĞA": [
+    "DOĞA",
+    "DOĞA CEPHE - TORYUM VİLLA",
+    "DOĞA CEPHE ENKA",
+    "DOĞA PVC",
+    "DOĞA PVC ACİL",
+    "DOĞA PVC BETSAN",
+    "DOĞA PVC DEVA İLAÇ",
+    "DOĞA PVC KEŞAN",
+    "DOĞA PVC TİC ODASI",
+    "DOĞA PVC TİC. ODASI."
+  ],
+  "DOĞUŞ_TEKNİK": [
+    "DOĞUŞ TEKNİK",
+    "DOĞUŞ TEKNİK ACİL",
+    "DOĞUŞ TEKNİK İLAVE",
+    "DOĞUŞ TEKNİK ÖZEL",
+    "DOĞUŞ TEKNİK SİPARİŞ"
+  ],
+  "EDİRNE": [
+    "EDİRNE",
+    "EDİRNE  FT ALM",
+    "EDİRNE 1",
+    "EDİRNE ACİL",
+    "EDİRNE ACİL AKINN",
+    "EDİRNE AHB YAPI",
+    "EDİRNE AK PLASTİK",
+    "EDİRNE AKBULUT",
+    "EDİRNE AKBULUT ALM",
+    "EDİRNE AKIN",
+    "EDİRNE AKIN ACİL",
+    "EDİRNE AKIN ACİLL",
+    "EDİRNE AKIN BEY",
+    "EDİRNE AKIN FT",
+    "EDİRNE AKINCI CAM",
+    "EDİRNE AKPLASTİK",
+    "EDİRNE ALİ BEY",
+    "EDİRNE ALM",
+    "EDİRNE AS PLAST",
+    "EDİRNE AS42 ÇİTA",
+    "EDİRNE ATİYE SENGÖR",
+    "EDİRNE ATİYE SENGÖRR",
+    "EDİRNE AYDIN UÇAR",
+    "EDİRNE AYDOĞAN SİP",
+    "EDİRNE BAKİYE",
+    "EDİRNE BALKAN",
+    "EDİRNE BULUTLAR MERMER",
+    "EDİRNE C60",
+    "EDİRNE CANAN YOLDURAK",
+    "EDİRNE CÖMERT PLASTK",
+    "EDİRNE DEKOR PEN",
+    "EDİRNE DENİZ PEN",
+    "EDİRNE DENİZPEN",
+    "EDİRNE DUSAKABİN",
+    "EDİRNE EMİR PLASTİK",
+    "EDİRNE ERDEMOĞLU",
+    "EDİRNE ESA",
+    "EDİRNE ESA ALM",
+    "EDİRNE FABRİKA",
+    "EDİRNE FASON",
+    "EDİRNE FASON KAPLAMA",
+    "EDİRNE FASON KAPLAMA İŞÇİLİK",
+    "EDİRNE FASON KÖŞEBENT",
+    "EDİRNE FT",
+    "EDİRNE FT ACİL",
+    "EDİRNE FT ALM",
+    "EDİRNE FT ALM ACİL",
+    "EDİRNE FT ALM ACİLLL",
+    "EDİRNE FT ALM AKIN",
+    "EDİRNE FT ALM FASON",
+    "EDİRNE FT ALM L",
+    "EDİRNE FT ALM PHİLEL",
+    "EDİRNE FT FASON",
+    "EDİRNE FT İSMAİL",
+    "EDİRNE FT İŞÇİLİK",
+    "EDİRNE GÖKMAVİ",
+    "EDİRNE HAKTAN PEN",
+    "EDİRNE HANS ALM",
+    "EDİRNE HAS GÜR",
+    "EDİRNE HASAN DUVAN",
+    "EDİRNE HASAN YILMAZ",
+    "EDİRNE HATİPĞOLU",
+    "EDİRNE HATİPOĞLU",
+    "EDİRNE HÜSEYİN AVCU",
+    "EDİRNE İŞÇİLİK",
+    "EDİRNE MAGAZA",
+    "EDİRNE MAĞAZA",
+    "EDİRNE MODERN",
+    "EDİRNE MODERN İNŞ",
+    "EDİRNE MODERN İNŞ.",
+    "EDİRNE MODERN İNŞAAT",
+    "EDİRNE MODERN YAPI",
+    "EDİRNE ÖNER PLASTİK",
+    "EDİRNE ÖNER PLASTİK FASON",
+    "EDİRNE ÖZ DUŞ",
+    "EDİRNE ÖZ EL PEN",
+    "EDİRNE ÖZ YILDIRIM",
+    "EDİRNE ÖZDUŞ",
+    "EDİRNE ÖZEL PEN",
+    "EDİRNE ÖZGÜR",
+    "EDİRNE ÖZYIL TH62",
+    "EDİRNE ÖZYIL ÜNAL",
+    "EDİRNE ÖZYILDIRIM",
+    "EDİRNE ÖZYILDIRIM KERESTE",
+    "EDİRNE ÖZYILDIRM",
+    "EDİRNE ÖZYLDIRIM",
+    "EDİRNE REZERV",
+    "EDİRNE SİNEKLİK",
+    "EDİRNE SİPARİŞİ",
+    "EDİRNE STOK",
+    "EDİRNE STOK ACİL",
+    "EDİRNE TEK CAM CB",
+    "EDİRNE TRAK PEN",
+    "EDİRNE TRAKYA ALM",
+    "EDİRNE UĞUR",
+    "EDİRNE UĞUR FASON",
+    "EDİRNE ÜÇ KARDEŞ",
+    "EDİRNE ÜÇ KARDEŞLER",
+    "EDİRNE YALITIMLI",
+    "EDİRNE YILDIZ PEN",
+    "EDİRNE YUSUF TUTAL",
+	"EİDRNE FT ALM",
+	"ERİRNE AKIN"
+  ],
+  "EDİZ_CAM": [
+    "EDİZ CAM ACİLL"
+  ],
+  "EFENDİOĞLU": [
+    "EFENDİOĞLU SİPARİŞİ ACİL"
+  ],
+  "EFFE": [
+    "EFFE ACİL",
+    "EFFE ENDÜSTRRİ"
+  ],
+  "ELOKSAL": [
+    "ELOKSAL İŞÇİLİŞ GÜMÜŞÇAY"
+  ],
+  "EMÜ": [
+    "EMÜ OTOGAR"
+  ],
+  "ENGİN": [
+    "ENGİN ÖZCAN"
+  ],
+  "ENTEMA": [
+    "ENTEMA"
+  ],
+  "ERAKS": [
+    "ERAKS",
+    "ERAKS ACİL",
+    "ERAKS ACİLL",
+    "ERAKS LİMONOSSO",
+    "ERAKS MEDİCANA SAMSUN",
+    "ERAKS SİPARİŞİ",
+    "ERAKS-ATAKÖY"
+  ],
+  "ERALSEN": [
+    "ERALSEN"
+  ],
+  "ERDAL": [
+    "ERDAL   GÜMÜŞÇAY TRABZON",
+    "ERDAL SARAL TRABZON"
+  ],
+  "ERDEMOĞLU": [
+    "ERDEMOĞLU"
+  ],
+  "EREĞLİ": [
+    "EREĞLİ PERGOLE",
+	"EREGLİ PERGOLE"
+  ],
+  "ERHAL": [
+    "ERHAL PLASTİK"
+  ],
+  "ERKAS": [
+    "ERKAS ACİL"
+  ],
+  "ERKU": [
+    "ERKU ÇOK ACİLLLL",
+    "ERKU MİMARLIK",
+    "ERKU MUHENDİSLİK",
+    "ERKU MÜH CEPHE",
+    "ERKU MÜH CEPHE 2",
+    "ERKU MÜHENDİSLİK"
+  ],
+  "ERLER_ALM": [
+    "ERLER ALM ACİLL"
+  ],
+  "EROL": [
+    "EROL KARADENİZ PEN"
+  ],
+  "ESNAF": [
+    "ESNAF",
+    "ESNAF ACİL",
+    "ESNAF ACİLL",
+    "ESNAF ALM",
+    "ESNAF ALM ACİL",
+    "ESNAF ALM ACİLL",
+    "ESNAF ALM C60",
+    "ESNAF ALM ENGİN YAPI",
+    "ESNAF ALM FASON",
+    "ESNAF ALM KUTU",
+    "ESNAF ALM MERİÇ",
+    "ESNAF ALM PRES",
+    "ESNAF ALM TAMER",
+    "ESNAF C55",
+    "ESNAF ENGİN YAPI",
+    "ESNAF FASON",
+    "ESNAF FATİH",
+    "ESNAF FATİH ACİL",
+    "ESNAF FATİH ACİLLL",
+    "ESNAF ISI YALITIMLI",
+    "ESNAF MERİÇ",
+    "ESNAF SELİM",
+    "ESNAF SELİM ACİLL",
+    "ESNAF TAMER",
+    "ESNAF TIR PROFİLİ"
+  ],
+  "EŞREF": [
+    "ESREF",
+	"EŞREF SİNEKLİK",
+    "EŞREF STOK"
+  ],
+  "ETKİLİ": [
+    "ETKİLİ PROJE PENDİK SEVK"
+  ],
+  "EYMEN": [
+    "EYMEN",
+    "EYMEN 1",
+    "EYMEN 1 ACİL SİP",
+    "EYMEN 2",
+    "EYMEN 2 SİPARİŞİ",
+    "EYMEN ACİL",
+    "EYMEN ACİL STOK",
+    "EYMEN ACİLL",
+    "EYMEN BİREL BADEMLİ",
+    "EYMEN BORU SİPARİŞİ",
+    "EYMEN BUSRA",
+    "EYMEN BUSRA 3",
+    "EYMEN BÜSRA",
+    "EYMEN BÜSRA 2",
+    "EYMEN BÜŞRA",
+    "EYMEN BÜŞRA 2",
+    "EYMEN BÜŞRA KUTU",
+    "EYMEN BÜŞRA KÜPEŞTE",
+    "EYMEN C60",
+    "EYMEN CEPHE",
+    "EYMEN CEPHE 2",
+    "EYMEN CEPHE KAPAĞI",
+    "EYMEN ÇITA",
+    "EYMEN ÇOK ACİL",
+    "EYMEN EİBAT",
+    "EYMEN EMRE BEY",
+    "EYMEN ENGELSİZ YAŞAM",
+    "EYMEN ENGELSİZYAŞAM1",
+    "EYMEN FRANSA",
+    "EYMEN FRANSA 7003MAT",
+    "EYMEN FRANSA 7016MAT",
+    "EYMEN GÖKSEL",
+    "EYMEN GÜRBÜZLER",
+    "EYMEN HAVA LİMANI",
+    "EYMEN İLAVE",
+    "EYMEN KARGO",
+    "EYMEN KUTU",
+    "EYMEN KUTU SİPARİŞİ",
+    "EYMEN KÜPEŞTE",
+    "EYMEN MOD MUDANYA",
+    "EYMEN ÖZGÜR KENT",
+    "EYMEN PERGOLE İLAVE",
+    "EYMEN REFRESCO",
+    "EYMEN SİPARİŞ",
+    "EYMEN SL34",
+    "EYMEN SL38T+TH55",
+    "EYMEN SORG8 VİLLA",
+    "EYMEN STAR ÇELTİK",
+    "EYMEN STARÇELTİK AB",
+    "EYMEN UĞUR",
+    "EYMEN VENISSIEUX",
+    "EYMEN VONSTEEL",
+    "EYMEN YALOVA",
+    "EYMEN YENİ KALIP",
+    "EYMENN",
+    "EYMMEN BÜŞRA"
+  ],
+  "FABRİKA": [
+    "FABRİKA İDARİ BİNA",
+    "FABRİKA TEST  NUMUNESİ FC50",
+    "FABRİKA TEST NUMUNESİ"
+  ],
+  "FAHRETTİN": [
+    "FAHRETTİN DÜZGÜN"
+  ],
+  "FASON": [
+    "FASON",
+    "FASON  T.DAĞ Y.OĞULLARI",
+    "FASON  TEKİRDAĞ UĞUR",
+    "FASON ALİ BEY",
+    "FASON ÇORLU STAND",
+    "FASON EDİRNE",
+    "FASON EDİRNE AK PLASTİK",
+    "FASON EDİRNE HATİPOĞLU",
+    "FASON FDT 62",
+    "FASON KAPALI SPOR",
+    "FASON KAPLAMA",
+    "FASON KÖŞEBENT",
+    "FASON UĞUR"
+  ],
+  "FDT62": [
+    "FDT62 FASON",
+    "FDT62-42"
+  ],
+  "FORESTY": [
+    "FORESTY"
+  ],
+  "FT_ALM": [
+    "FT ALM. 1"
+  ],
+  "FULL_CAM": [
+    "FULL CAM",
+    "FULL CAM SANAYİ"
+  ],
+  "GERT": [
+    "GERT METAL ACİLL",
+    "GERT METAL FASON",
+    "GERT YAPI ACİLL"
+  ],
+  "GİSA": [
+    "GİSA",
+    "GİSA PREFABRİK",
+    "GİSA PREFABRİK ACİL"
+  ],
+  "GM": [
+    "GM İNŞ ÜMİT ACİLL"
+  ],
+  "GÖL": [
+    "GÖL MAHAL FASON",
+    "GÖLMAHAL SOSYALTESİS"
+  ],
+  "GÖZDE_ALM": [
+    "GÖZDE ALM",
+    "GÖZDE ALM ACİLL",
+    "GÖZDE ALM FASON",
+	"OLCAY ALTIN",
+    "OLCAY ALTIN FASON"
+  ],
+  "GÜÇLER": [
+    "GÜÇLER İNŞ",
+    "GÜÇLER İNŞ KAPLAMA ACİL"
+  ],
+  "GÜLCANOĞLU": [
+    "GÜLCANOĞLU İNŞAAT"
+  ],
+  "GÜLTAŞ": [
+    "GÜLTAŞ ACİLL",
+    "GÜLTAŞ ALTYAPI"
+  ],
+  "GÜMÜŞÇAY": [
+    "GÜMÜŞÇAY",
+	"GUMUSÇAY",
+    "GÜMÜŞÇAY ACİL",
+    "GÜMÜŞÇAY AKG COOL",
+    "GÜMÜŞÇAY ARSTAN",
+    "GÜMÜŞÇAY ARTSTONE",
+    "GÜMÜŞÇAY ATINÇ",
+    "GÜMÜŞÇAY ATINÇ BEY",
+    "GÜMÜŞÇAY AYDIN BEY",
+    "GÜMÜŞÇAY BAKAY",
+    "GÜMÜŞÇAY BAYER",
+    "GÜMÜŞÇAY BETSAN",
+    "GÜMÜŞÇAY BİRİNCİLER",
+    "GÜMÜŞÇAY BURGAZ",
+    "GÜMÜŞÇAY BÜLENT BEY",
+    "GÜMÜŞÇAY CAN KURT",
+    "GÜMÜŞÇAY CANKURT",
+    "GÜMÜŞÇAY CEM EVİ",
+    "GÜMÜŞÇAY CENGİZ BEY",
+    "GÜMÜŞÇAY CENK BEY",
+    "GÜMÜŞÇAY ÇİĞ KÖFTE",
+    "GÜMÜŞÇAY EMRAH BEY",
+    "GÜMÜŞÇAY ERDEM",
+    "GÜMÜŞÇAY ERDEM ACİL",
+    "GÜMÜŞÇAY ERDEM2",
+    "GÜMÜŞÇAY ERDİ",
+    "GÜMÜŞÇAY FABRİKA ASİST",
+    "GÜMÜŞÇAY FASON",
+    "GÜMÜŞÇAY GETA",
+    "GÜMÜŞÇAY GETA RAAL",
+    "GÜMÜŞÇAY GIDA SİTESİ",
+    "GÜMÜŞÇAY GÖKAY BEY",
+    "GÜMÜŞÇAY GÖKÇE ADA",
+    "GÜMÜŞÇAY GREEN LİFE",
+    "GÜMÜŞÇAY GREENLİFE",
+	"GUMÜŞÇAY HASTANE",
+    "GÜMÜŞÇAY HAMİTABAT",
+    "GÜMÜŞÇAY HONDA",
+    "GÜMÜŞÇAY HSE",
+    "GÜMÜŞÇAY İNTERLAB",
+    "GÜMÜŞÇAY İREKS",
+    "GÜMÜŞÇAY KAPALI SPOR",
+    "GÜMÜŞÇAY KAPALISPOR",
+    "GÜMÜŞÇAY KARACABEY",
+    "GÜMÜŞÇAY KIRKLARELİ PROJE",
+    "GÜMÜŞÇAY KÖŞK DERE",
+    "GÜMÜŞÇAY KÖŞKDERE",
+    "GÜMÜŞÇAY KUTU",
+    "GÜMÜŞÇAY LİLA",
+    "GÜMÜŞÇAY METİNUZUNOĞLU",
+    "GÜMÜŞÇAY MODERN YAPI",
+    "GÜMÜŞÇAY MÜRSEL BEY",
+    "GÜMÜŞÇAY NİLÜFER HANIM",
+    "GÜMÜŞÇAY ORÇUN BEY",
+    "GÜMÜŞÇAY OSGB",
+    "GÜMÜŞÇAY PARKECİ ALİ",
+    "GÜMÜŞÇAY RAAL",
+    "GÜMÜŞÇAY SALİM BEY",
+    "GÜMÜŞÇAY SAMSUNG",
+    "GÜMÜŞÇAY SİNAN",
+    "GÜMÜŞÇAY SPOR SALONU",
+    "GÜMÜŞÇAY ŞENTÜRK",
+    "GÜMÜŞÇAY ŞENTÜRK ACİL",
+    "GÜMÜŞÇAY TANITIM",
+    "GÜMÜŞÇAY TANITIMETİK",
+    "GÜMÜŞÇAY TEKMER",
+    "GÜMÜŞÇAY TİC ODASI",
+    "GÜMÜŞÇAY TSO",
+    "GÜMÜŞÇAY TURGUT",
+    "GÜMÜŞÇAY VERA PARK",
+    "GÜMÜŞÇAY VERAPARK",
+    "GÜMÜŞÇAY YAVUZ BEY",
+    "GÜMÜŞÇAY YES MİMARLIK",
+    "GÜMÜŞÇAY YES ÜREN",
+    "GÜMÜŞÇAYPEN",
+	"G.ÇAY ŞENTÜRKHASTANE"
+  ],
+  "GÜŞLER": [
+    "GÜŞLER İNŞ"
+  ],
+  "HAKAN": [
+    "HAKAN ŞERBET ACİL"
+  ],
+  "HAMDİ": [
+    "HAMDİ BEY ACİL"
+  ],
+  "HAN": [
+    "HAN GRUP ACİL",
+    "HAN İNŞ",
+    "HAN İNŞ CEPHE",
+    "HAN İNŞ."
+  ],
+  "HAS": [
+    "HAS KAPI"
+  ],
+  "HASPEN": [
+    "HASPEN ALM"
+  ],
+  "HAYAT": [
+    "HAYAT OTOMATİK KAPI"
+  ],
+  "HAYDAR": [
+    "HAYDAR KARABULUT"
+  ],
+  "HEGRA": [
+    "HEGRA DUŞ"
+  ],
+  "HELKA": [
+    "HELKA"
+  ],
+  "HERKAYA": [
+    "HERKAYA SİPARİŞİ"
+  ],
+  "HIRVATİSTAN": [
+    "HIRVATİSTAN",
+	"HIRVAİSTAN NUMUNE",
+    "HIRVATİSTAN  LA MULA 2.ETAP",
+    "HIRVATİSTAN  MEKANİK ŞÇİLİKLİ",
+    "HIRVATİSTAN ACİL",
+    "HIRVATİSTAN ACİLLL LAMUNA",
+    "HIRVATİSTAN ARCUS",
+    "HIRVATİSTAN ÇITA",
+    "HIRVATİSTAN DENİZLİK ACİL",
+    "HIRVATİSTAN ELİFOĞLU",
+    "HIRVATİSTAN LA MULA ACİL",
+    "HIRVATİSTAN LAMULA",
+    "HIRVATİSTAN LAMULA ACİL",
+    "HIRVATİSTAN LAMUNA"
+  ],
+  "HOLLANDA": [
+    "HOLLANDA",
+    "HOLLANDA TERMAL"
+  ],
+  "IAS": [
+    "IAS SAKARYA PROJESİ"
+  ],
+  "İHRACAT": [
+    "İHRACAT DEMİR"
+  ],
+  "İHSAN": [
+    "İHSAN KAPTANOĞLU"
+  ],
+  "İKLİM": [
+    "İKLİM ŞENOL"
+  ],
+  "İNTEGRAL": [
+    "İNTEGRAL KUTU"
+  ],
+  "İRFAN": [
+    "İRFAN ÖZDEMİR ACİL"
+  ],
+  "İSTANBUL": [
+    "İSTANBUL MENFEZ",
+	"İSTANUL MENFEZ"
+  ],
+  "İZOPEN": [
+    "İZOPEN",
+    "İZOPEN ACİL",
+    "İZOPEN ACİLL",
+    "İZOPEN ACİLLL",
+    "İZOPEN ACİLL REZERVLİ",
+    "İZOPEN ARİF BEY",
+    "İZOPEN AYŞE ESRA",
+    "İZOPEN BAFRA OTOGAR",
+    "İZOPEN ERKAN AKYÜZ",
+    "İZOPEN HACI BEY",
+    "İZOPEN İHSAN KAPTAN ACİLLLL",
+    "İZOPEN İHSAN KAPTANOĞLU",
+    "İZOPEN İHSAN KÜPEŞTE",
+    "İZOPEN İLAVE",
+    "İZOPEN İLYAS",
+    "İZOPEN İLYAS ACİL",
+    "İZOPEN LOTUS LEGEND",
+    "İZOPEN LOTUS TWİN",
+    "İZOPEN LS60",
+    "İZOPEN MEHMET KAZAK",
+    "İZOPEN MUSTAFA EKŞİ",
+    "İZOPEN SL40+TH55",
+    "İZOPEN TM55",
+    "İZOPEN TURAN ELMACI",
+    "İZOPEN YAŞAR GÜRSOY",
+    "İZOPENN"
+  ],
+  "JANDARMA": [
+    "JANDARMA"
+  ],
+  "KAAN": [
+    "KAAN  ACİL",
+    "KAAN ALM",
+    "KAAN ALM ACİL",
+    "KAAN ALM ACİLL",
+    "KAAN ALM ACİLLL",
+    "KAAN ALM ALİ ABİ",
+    "KAAN ALM AŞKIN",
+    "KAAN ALM BATUHAN",
+    "KAAN ALM COTTA",
+    "KAAN ALM ÇİĞDEM HANIM",
+    "KAAN ALM ÇOK ACİLLLLLL",
+    "KAAN ALM ÇORLU",
+    "KAAN ALM ERKU ACİL",
+    "KAAN ALM FCB",
+    "KAAN ALM FCB CEPHE",
+    "KAAN ALM FCB DOĞRAMA",
+    "KAAN ALM FİBEY HATAY",
+    "KAAN ALM HAKAN ŞENTÜRK",
+    "KAAN ALM HATAY",
+    "KAAN ALM HATAY 2",
+    "KAAN ALM KAAN",
+    "KAAN ALM KUTU",
+    "KAAN ALM LS60",
+    "KAAN ALM MN617",
+    "KAAN ALM MOSKOVA",
+    "KAAN ALM TAŞ EV",
+    "KAAN NAZLIGÜL"
+  ],
+  "KADİR": [
+    "KADİR FİDAN"
+  ],
+  "KAFDAŞ": [
+    "KAFDAŞ",
+    "KAFDAŞ ACİL",
+	"KAFTAŞ ACİLL"
+  ],
+  "KAĞAN": [
+    "KAĞAN ALM",
+	"KAGAN  PEN",
+    "KAGAN ALM",
+    "KAGAN PEN"
+  ],
+  "KAHE": [
+    "KAHE",
+    "KAHE  ACİL",
+    "KAHE ACİL",
+    "KAHE ALİ",
+    "KAHE ALM ACİLL"
+  ],
+  "KAPALI": [
+    "KAPALI SPOR SAİT",
+    "KAPALI SPOR SALONU"
+  ],
+  "KARPEN": [
+    "KARPEN",
+    "KARPEN ACİL",
+    "KARPEN ÇETİN",
+    "KARPEN ÇOK ACİLLLL",
+    "KARPEN FASON",
+	"KAR PEN ACİLL"
+  ],
+  "KAYA": [
+    "KAYA KARDEŞLER SİVAS"
+  ],
+  "KEMAL": [
+    "KEMAL TEKE 100*100",
+    "KEMAL TEKE ÇİT 1",
+    "KEMAL TEKE ÇİT 2",
+    "KEMAL TEKE GARAJ ÇİT",
+    "KEMAL TEKE PERGOLE"
+  ],
+  "KIRAY": [
+    "KIRAY",
+    "KIRAY MAKİNA",
+    "KIRAY MAKİNE"
+  ],
+  "KIRKLARELİ": [
+    "KIRKLARELİ DEVLET",
+    "KIRKLARELİ HASTANE",
+	"KIRKALRELİ DEVLET"
+  ],
+  "KİMYA": [
+    "KİMYA FABRİKASI"
+  ],
+  "KUBRAT": [
+    "KUBRAT 29.04.2024"
+  ],
+  "KUTU": [
+    "KUTU"
+  ],
+  "kübra": [
+    "kübra"
+  ],
+  "LA_MULA": [
+    "LA MULA ACİL"
+  ],
+  "LİZA": [
+    "LİZA DUŞ",
+    "LİZA DUŞ ACİL"
+  ],
+  "MALATYA": [
+    "MALATYA ADLİYE  1 PROJE",
+    "MALATYA ADLİYE 2 PROJE",
+    "MALATYA ADLİYE 3 PROJE",
+    "MALATYA ADLİYESİ CEPHE EKSİK KALAN",
+    "MALATYA ADLİYESİ İLAVE",
+    "MALATYA ADLİYESİ TH68",
+    "MALATYA TOKİ VENÜS"
+  ],
+  "MAS_GRUP": [
+    "MAS GRUP",
+    "MAS GRUP ACİL",
+    "MAS GRUP ACİLL",
+    "MAS GRUP C60"
+  ],
+  "MEHMET LİMONOSSO": [
+    "MEHMET LİMONOSSO",
+    "MEHMET LİMONOSSO İŞÇ"
+  ],
+  "MELEN": [
+    "MELEN YAPI ŞENOL"
+  ],
+  "MEMNUN": [
+    "MEMNUN MAKİNE",
+    "MEMNUN MAKİNE YENİ KALIP"
+  ],
+  "MERTHAN": [
+    "MERTHAN SEZAİ"
+  ],
+  "MESAN": [
+    "MESAN"
+  ],
+  "MESUT DEVECİ": [
+    "MESUT DEVECİ"
+  ],
+  "MESUT DÜKKANCIOĞLU": [
+    "MESUT DÜKKANCIOĞLU"
+  ],
+  "MESUTPEN": [
+    "MESUTPEN ACİLL",
+	"MESUT PEN MESUT"
+  ],
+  "MİMAR": [
+    "MİMAR ERSİN",
+    "MİMAR YUNUS GÜL"
+  ],
+  "MİSSOM": [
+    "MİSSOM MALATYA ADLİYESİ"
+  ],
+  "MMÜ": [
+    "MMÜ KÜPEŞTE"
+  ],
+  "MOBİLYACILAR": [
+    "MOBİLYACILAR SİNEKLİK"
+  ],
+  "MODRO": [
+    "MODRO AHŞAP",
+    "MODRO AHŞAP OFİS BLM"
+  ],
+  "MODÜL": [
+    "MODÜL",
+    "MODÜL ACİL",
+    "MODÜL ACİLLLL",
+    "MODÜL CEPHE",
+    "MODÜL CEPHE ACİL",
+    "MODÜL CEPHE FASON",
+    "MODÜL FASON",
+    "MODÜL IŞIKLIK",
+    "MODÜL İLAVE",
+    "MODÜL LS60",
+    "MODÜLL"
+  ],
+  "MUES": [
+    "MUES  SAKARYA",
+    "MUES ZAİMOĞLU"
+  ],
+  "MURAT": [
+    "MURAT CEPHECİ"
+  ],
+  "MUSA PADIR": [
+    "MUSA PADIR"
+  ],
+  "MUSTAFA BAYRAK": [
+    "MUSTAFA BAYRAK"
+  ],
+  "NİHAT": [
+    "NİHAT AKTÜRK",
+    "NİHAT KİLİMCİ KAPLAM"
+  ],
+  "NİKA": [
+    "NİKA",
+    "NİKA ACİL",
+    "NİKA KOMP ACİL",
+    "NİKA PROFİMET"
+  ],
+  "NUMUNE": [
+    "NUMUNE",
+    "NUMUNE ACİL"
+  ],
+  "NURAY_ALM": [
+    "NURAY ALM",
+    "NURAY ALM ACİL",
+    "NURAY ALM FASON M0",
+    "NURAY ALM LS60",
+    "Nuray Alüminyum Acil",
+	"CEM ALTIN"
+  ],
+  "OĞUZ": [
+    "OĞUZ METAL"
+  ],
+  "ONS": [
+    "ONS ACİL",
+    "ONS ADLİYE  HARUN SİVAS",
+    "ONS ADLİYE / SİVAS FABRİKA",
+    "ONS AĞCAOĞLU",
+    "ONS AĞCAOĞLU İLAVE ACİL",
+    "ONS AKM ACİL SİPARİŞİ",
+    "ONS AKM ANKARA",
+    "ONS AKM C60 TH62",
+    "ONS AKM CEPHE",
+    "ONS AKM KÜLTÜR",
+    "ONS ANKARA",
+    "ONS ANKARA 2",
+    "ONS ANKARA ACİL",
+    "ONS ANKARA ADLİYESİ",
+    "ONS ANKARA AKM",
+    "ONS ANKARA CEYHUN",
+    "ONS ANKARA TSE",
+    "ONS CEPHE ALDOKS",
+    "ONS CEPHE ANKARA SEVK",
+    "ONS CEPHE BODRUM",
+    "ONS CEPHE FAB. ACİL",
+    "ONS CEPHE SİVAS",
+    "ONS CEYHUN ACİLL",
+    "ONS DEMİR GRUP SİVAS",
+    "ONS EMAY",
+    "ONS İLHAN BEY",
+    "ONS İLHAN BEY ACİLL",
+    "ONS MEHVES CAFE",
+    "ONS MEHVES CAFE BKM",
+    "ONS MUHLİS",
+    "ONS MUHLİS SİVAS",
+    "ONS SİVAS",
+    "ONS SİVAS ACİL",
+    "ONS SİVAS AKM",
+    "ONS SİVAS EMAY PANEL",
+    "ONS SİVAS FABRİKA",
+    "ONS SİVAS FDT62",
+    "ONS SİVAS İLHAN BEY",
+    "ONS SİVAS MEHVEŞ",
+    "ONS SİVAS MUHLİS",
+    "ONS SİVAS NEVHOLLAND",
+    "ONS SİVAS ÖZPA",
+    "ONS SİVASÖZ YILMAZLR",
+    "ONS TANAP ACİL",
+    "ONS TSE",
+    "ONS TSE ACİL",
+    "ONS TSE SİVAS",
+    "ONS TSO SİPARİŞİ",
+    "ONS UZAY MAKİNA"
+  ],
+  "ORAPEN": [
+    "ORAPEN A BLOK",
+    "ORAPEN ACİL",
+    "ORAPEN ACİLL",
+    "ORAPEN ACİLLL",
+    "ORAPEN B BLOK",
+    "ORAPEN İLAVE ACİLL",
+    "ORAPEN KLEOPATRA",
+    "ORAPEN KLEOPATRA ACİL İLAVE",
+    "ORAPEN NUMUNE SL40T",
+    "ORAPEN VİLLA PROJESİ"
+  ],
+  "ÖZAGAOĞLU": [
+    "ÖZAGAOĞLU"
+  ],
+  "ÖZDEMİR": [
+    "ÖZDEMİR İNŞAAT",
+    "ÖZDEMİR SULTANKÖY OKUL"
+  ],
+  "ÖZGÜR": [
+    "ÖZGÜR",
+    "ÖZGÜR 2",
+    "ÖZGÜR ACİL",
+    "ÖZGÜR ACİLL",
+    "ÖZGÜR ACİLLLL",
+    "ÖZGÜR BEY",
+    "ÖZGÜR BEY ACİL",
+    "ÖZGÜR BEY FASON",
+    "ÖZGÜR BEYY",
+    "ÖZGÜR FASON",
+    "ÖZGÜR HAKKI",
+    "ÖZGÜR KÖŞEBENT",
+    "ÖZGÜR MAĞAZA ACİLLLL",
+    "ÖZGÜR YAPI  PANOVA",
+    "ÖZGÜR YAPI - PANOVA",
+    "ÖZGÜR YÜKSEL",
+    "ÖZGÜR YÜKSEL ACİL",
+    "ÖZGÜRR",
+    "ÖZGÜRRRR",
+    "ÖZGÜRRRRRRR",
+	"OZGUR",
+    "OZGUR YUKSEL",
+	"ÖZGĞR"
+  ],
+  "ÖZTAŞLAR": [
+    "ÖZTAŞLAR İNŞ AYDINLI"
+  ],
+  "ÖZTÜRK": [
+    "ÖZTÜRK BRANDA BİLGİN"
+  ],
+  "ÖZYLDIRIM": [
+    "ÖZYLDIRIM"
+  ],
+  "PANOVA": [
+    "PANOVA",
+    "PANOVA ACİL",
+    "PANOVA ACİLL",
+    "PANOVA ACİLLL"
+  ],
+  "PİVOTAL": [
+    "PİVOTAL MUSA BEY"
+  ],
+  "POWER": [
+    "POWER İNŞAAT ACİL",
+    "POWER İNŞAAT B BLOK ACİL"
+  ],
+  "PROTECK": [
+    "PROTECK"
+  ],
+  "RAY": [
+    "RAY OTOMASTON"
+  ],
+  "RECEP": [
+    "RECEP ABİ SİPARİŞİ"
+  ],
+  "RENOVASYON": [
+    "RENOVASYON"
+  ],
+  "ROTAPEN": [
+    "ROTAPEN",
+    "ROTAPEN ACİL",
+    "ROTAPEN DENİZLİK",
+    "ROTAPEN DENİZLİK ACİL",
+    "Rotapen Denizlik"
+  ],
+  "SABRİ": [
+    "SABRİ BEY",
+    "SABRİ BEY ACİL"
+  ],
+  "SAİT": [
+    "SAİT KAPALISPOR ACİL"
+  ],
+  "SANAYİ": [
+    "SANAYİ",
+	"SANAYI",
+    "SANAYİ ACİL",
+    "SANAYİ DEMİR ACİLLLL",
+    "SANAYİ DEMİR YAPI",
+    "SANAYİ KAAN ALM",
+    "SANAYİ KAFDAŞ",
+    "SANAYİ KAFDAŞ 2008",
+    "SANAYİ KAFDAŞ 7033",
+    "SANAYİ KAFDAŞ ACİL",
+    "SANAYİ KAFDAŞ ASLAN",
+    "SANAYİ KAFDAŞ BEŞEL",
+    "SANAYİ KAFDAŞ KASET",
+    "SANAYİ KAFDAŞ KUTU",
+    "SANAYİ KAFTAŞ",
+    "SANAYİ KAFTAŞ ACİL",
+    "SANAYİ KAKDAŞ",
+    "SANAYİ KARE KÜPEŞTE",
+    "SANAYİ KÜPEŞTE",
+    "SANAYİ LS60",
+    "SANAYİ MAĞAZA",
+    "SANAYİ NEJLA BAYRAK",
+    "SANAYİ OFTRANS ACİL",
+    "SANAYİ POTİNOĞLU",
+    "SANAYİ PUCCA",
+    "SANAYİ S.S DAR RAY",
+    "SANAYİ SB",
+    "SANAYİ STOK ACİL",
+    "SANAYİ ŞB",
+    "SANAYİ TEKNİK YAPI",
+    "SANAYİ VAHDET",
+    "SANAYİ ZAİMOĞLU ACİL",
+    "SANAYİ ZAİMOĞLU CPHE",
+	"VAHDET"
+  ],
+  "SARICAN": [
+    "SARICAN ACİL",
+    "SARICAN İLAVE ACİL",
+    "SARICAN YAPI HATAY ACİLL",
+    "SARICAN YAPI HATAY KÜPEŞTE"
+  ],
+  "SAROZ": [
+    "SAROZ ALM"
+  ],
+  "SEDAT": [
+    "SEDAT BEY PROJE",
+    "SEDAT TUNÇ",
+    "SEDATBEY PROJE"
+  ],
+  "SELÇUK": [
+    "SELÇUK",
+    "SELÇUK BEY",
+    "SELÇUK BEY ACİL",
+    "SELÇUK BEY ACİLL"
+  ],
+  "SELİMPAŞA": [
+    "SELİMPAŞA B FLOUR"
+  ],
+  "SEMİH": [
+    "SEMİH SEYMENLİ"
+  ],
+  "SER": [
+    "SER MEK FASON ELOKSA İŞÇ",
+    "SER MEKATRONİK",
+    "SER MEKATRONİK ACİL"
+  ],
+  "SERAMİK": [
+    "SERAMİK CEPHE"
+  ],
+  "SEREST": [
+    "SEREST FRANSA BURGAZ"
+  ],
+  "SERKAN": [
+    "SERKAN CAM"
+  ],
+  "SEVGİ": [
+    "SEVGİ DİŞ ACİLL",
+    "SEVGİ DİŞ HASTENESİ"
+  ],
+  "SEVİNÇ": [
+    "SEVİNÇ KÜPEŞTE",
+    "SEVİNÇ KÜPEŞTE ACİL"
+  ],
+  "SEZAİ": [
+    "SEZAİ BEY",
+    "SEZAİ YILMAZ ACİL"
+  ],
+  "SEZGİN": [
+    "SEZGİN İNŞ",
+    "SEZGİN İNŞ ACİL",
+    "SEZGİN İNŞ TH55 ACİL"
+  ],
+  "SILA": [
+    "SILA ACİL",
+    "SILA ÖMER",
+    "SILA YAPI",
+    "SILA YAPI ACİL"
+  ],
+  "SİLİVRİ": [
+    "SİLİVRİ KÜPEŞTE",
+    "SİLİVRİ PLUS CEPHE"
+  ],
+  "SİNEKLİK": [
+    "SİNEKLİK",
+    "SİNEKLİK UĞUR"
+  ],
+  "SİNPAŞ": [
+    "SİNPAŞ ACİL",
+	"SİNPAS ACİL",
+    "SİNPAŞ SEFAKÖY ACİL"
+  ],
+  "SİVAS": [
+    "SİVAS MUHLİS"
+  ],
+  "SL28": [
+    "SL28 STOK",
+    "SL28-13 BERKANT"
+  ],
+  "SN80": [
+    "SN80"
+  ],
+  "ŞENOL": [
+    "ŞENOL ATASOY",
+    "ŞENOL İKLİM",
+    "ŞENOL TEKİRDAĞ"
+  ],
+  "ŞENTÜRK": [
+    "ŞENTÜRK ASM",
+    "ŞENTÜRK ASM İLAVE",
+    "ŞENTÜRK CEM EVİ",
+    "ŞENTÜRK HASTANE B BLOK",
+    "ŞENTÜRK K.HASTANE",
+	"ŞENTURK K ELİ DEVLET"
+  ],
+  "T.DAĞ": [
+    "T.DAĞ  FASON    TRAKYA CEPHE",
+    "T.DAĞ ACİL",
+    "T.DAĞ ACİLL",
+    "T.DAĞ ACİLLLL",
+    "T.DAĞ AKTUĞ YAPI",
+    "T.DAĞ AKYÜZ CAM",
+    "T.DAĞ ALİ ÇETİNEL",
+    "T.DAĞ ANKA",
+    "T.DAĞ ANKATİL",
+    "T.DAĞ ASYA PORT",
+    "T.DAĞ ASYAPORT",
+    "T.DAĞ AY MA SİPARİŞİ",
+    "T.DAĞ AYMA",
+    "T.DAĞ AYPENLER",
+    "T.DAĞ AYPENLER ACİLLL",
+    "T.DAĞ BALKAN PEN",
+    "T.DAĞ BALKAN TİC",
+    "T.DAĞ BAYER ALM",
+    "T.DAĞ BİLAL",
+    "T.DAĞ BİLAL ACİL",
+    "T.DAĞ BİLAL ACİLL",
+    "T.DAĞ BİLAL BEY",
+    "T.DAĞ BİLAL BEY ACİL",
+    "T.DAĞ BİLAL METAL",
+    "T.DAĞ BRT CEPHE",
+    "T.DAĞ CAN ALM",
+    "T.DAĞ CAN ALUM.",
+    "T.DAĞ CAVİT ABİ",
+    "T.DAĞ CEMS YAPI",
+    "T.DAĞ CENGİZ ATKIN",
+    "T.DAĞ CEPHE",
+    "T.DAĞ CEPHE ÇOK ACİL",
+    "T.DAĞ CEYLAN PEN",
+    "T.DAĞ ÇETİNEL",
+    "T.DAĞ ÇETİNEL ALM",
+    "T.DAĞ ÇOLAKOĞLU",
+    "T.DAĞ ÇUHARDAROĞLU",
+    "T.DAĞ DALLAS İNŞ",
+    "T.DAĞ EDİRNE VİLLA",
+    "T.DAĞ FASON",
+    "T.DAĞ FAZ YAPI",
+    "T.DAĞ FİDAN PEN",
+    "T.DAĞ GENCALLAR",
+    "T.DAĞ GENCALLAR ALM",
+    "T.DAĞ GÖK PEN",
+    "T.DAĞ HAKAN",
+    "T.DAĞ HALİÇ OTO",
+    "T.DAĞ İTİMAT YAPI",
+    "T.DAĞ KALE",
+    "T.DAĞ KALE ALM",
+    "T.DAĞ KARACA YAPI",
+    "T.DAĞ KESKİN ALM",
+    "T.DAĞ KUZEY PEN",
+    "T.DAĞ KUZEY ŞAHİN",
+    "T.DAĞ MASAL ALM",
+    "T.DAĞ MESUTBEY",
+    "T.DAĞ MİRA İNŞ",
+    "T.DAĞ MNS İNŞ",
+    "T.DAĞ MNS İNŞ.",
+    "T.DAĞ NADİFLER",
+    "T.DAĞ NUMUNE RENK SİPARİŞİ",
+    "T.DAĞ NURŞANİ",
+    "T.DAĞ NUŞANİ",
+    "T.DAĞ ÖZBİNGÖL",
+    "T.DAĞ ÖZBİNGÖL ACİLL",
+    "T.DAĞ ÖZBİNGÖL ALM",
+    "T.DAĞ PERGOLA",
+    "T.DAĞ PROCOMP",
+    "T.DAĞ RAMİS PEN",
+    "T.DAĞ RAMİZ PEN",
+    "T.DAĞ SELİM GÜLGEZEN",
+    "T.DAĞ SER YAPI",
+    "T.DAĞ STAR CEPHE",
+    "T.DAĞ T.CEPHE AKGÜN",
+    "T.DAĞ T.CEPHE AKSOY",
+    "T.DAĞ T.CEPHE ASMAK",
+    "T.DAĞ T.CEPHE ATİLLA",
+    "T.DAĞ T.CEPHE DEBY",
+    "T.DAĞ T.CEPHE DERBY",
+    "T.DAĞ T.CEPHE GÖNÜL",
+    "T.DAĞ T.CEPHE İLAVE",
+    "T.DAĞ T.CEPHE SAYKON",
+    "T.DAĞ T.CEPHE VARĞ",
+    "T.DAĞ TAZEGÜL",
+    "T.DAĞ TAZEGÜL ALM",
+    "T.DAĞ TEKİRDAĞ CEPHE",
+    "T.DAĞ TRAKYA CEĞHE",
+    "T.DAĞ TRAKYA CEPHE",
+    "T.DAĞ TRAKYA CEPHE ACİL",
+    "T.DAĞ TRAKYA CEPHE C60",
+    "T.DAĞ TRAKYA CEPHE FASON",
+    "T.DAĞ TRAKYA CEPHE ŞEREF BEY",
+    "T.DAĞ TRAKYA CEPHE TUFANLAR",
+    "T.DAĞ TRAKYA PEN",
+    "T.DAĞ TRAKYACEPHE",
+    "T.DAĞ TRAKYACEPHE KTUBA",
+    "T.DAĞ TRKAYA CEPHE",
+    "T.DAĞ UĞUR",
+    "T.DAĞ ÜNER PEN",
+    "T.DAĞ ÜNERPEN",
+    "T.DAĞ YASAROĞULLARI",
+    "T.DAĞ YAŞAR LS60",
+    "T.DAĞ YAŞAR TE62",
+    "T.DAĞ YAŞAROĞUL",
+    "T.DAĞ YAŞAROĞLLARI",
+    "T.DAĞ YAŞAROĞULLARI",
+    "T.DAĞ YILMAZ ALM",
+    "T.DAĞ YILMAZ İNŞ",
+	"T DAĞ BİLAL",
+    "T DAĞ BOYA",
+    "T DAĞ T RAKYA BAYKEM",
+	"T. DAĞ YAŞAROĞULLARI",
+	"T..DAĞ TRAKYA CEĞHE",
+	"T.KALE ALM",
+	"TDAĞ TRAKYA CEPHE",
+	"TEKİRDAĞ",
+    "TEKİRDAĞ ACİL",
+    "TEKİRDAĞ ACİLL",
+    "TEKİRDAĞ ACİLLL",
+    "TEKİRDAĞ AYPEN",
+    "TEKİRDAĞ AYPENLER",
+    "TEKİRDAĞ BALKAN PEN",
+    "TEKİRDAĞ BAYER",
+    "TEKİRDAĞ BİLAL",
+    "TEKİRDAĞ BİLAL ACİL",
+    "TEKİRDAĞ BİLAL ACİLL",
+    "TEKİRDAĞ BİLAL BEY",
+    "TEKİRDAĞ BİLAL LS60",
+    "TEKİRDAĞ BİLAL METAL",
+    "TEKİRDAĞ BİLALA ACİLL",
+    "TEKİRDAĞ CAN ALM",
+    "TEKİRDAĞ CEPHE",
+    "TEKİRDAĞ CEPHE ACİL",
+    "TEKİRDAĞ CEPHE M",
+    "TEKİRDAĞ CEYLAN PEN",
+    "TEKİRDAĞ ÇETİNEL",
+    "TEKİRDAĞ ÇOK ACİLL",
+    "TEKİRDAĞ ÇUHADAROĞLU",
+    "TEKİRDAĞ EMREKOCABEY",
+    "TEKİRDAĞ ENGİN ACİL",
+    "TEKİRDAĞ FASON",
+    "TEKİRDAĞ FATİH HAYAL",
+    "TEKİRDAĞ FİDAN PEN",
+    "TEKİRDAĞ GENCALLAR İNŞ",
+    "TEKİRDAĞ İTİMAT",
+    "TEKİRDAĞ İTİMAT YAPI",
+    "TEKİRDAĞ KALE",
+    "TEKİRDAĞ KALE ALM",
+    "TEKİRDAĞ KESKİN ALM",
+    "TEKİRDAĞ KUZEY PEN",
+    "TEKİRDAĞ KÜPEŞTE",
+    "TEKİRDAĞ MİMTAŞ",
+    "TEKİRDAĞ MİRA İNŞ",
+    "TEKİRDAĞ MUSTFA",
+    "TEKİRDAĞ NURŞANİ",
+    "TEKİRDAĞ ÖZ BİNGÖL",
+    "TEKİRDAĞ PLİSE SİNEKLİK",
+    "TEKİRDAĞ SER YAPI",
+    "TEKİRDAĞ SRAR CEPHE",
+    "TEKİRDAĞ STAR CEHPE",
+    "TEKİRDAĞ STAR CEPHE",
+    "TEKİRDAĞ TAZEGÜL",
+    "TEKİRDAĞ TAZEGÜL ALM",
+    "TEKİRDAĞ TH62",
+    "TEKİRDAĞ TRAKYA CEPH",
+    "TEKİRDAĞ TRAKYA CEPHE",
+    "TEKİRDAĞ TRAKYA CEPHE ŞAHDEM",
+    "TEKİRDAĞ UĞUR",
+    "TEKİRDAĞ Y OĞULLARI",
+    "TEKİRDAĞ YAŞAR TH62",
+    "TEKİRDAĞ YAŞAROGULLA",
+    "TEKİRDAĞ YAŞAROĞULLARI",
+    "TEKİRDAĞ YILMAZ ALM"
+  ],
+  "TARIK": [
+    "TARIK METAL"
+  ],
+  "TEZCAN": [
+    "TEZCAN ÇAVUŞ",
+    "TEZCAN ÇAVUŞ ÇOK ACİ",
+    "TEZCAN FASON"
+  ],
+  "TH62-30": [
+    "TH62-30"
+  ],
+  "TOKİ": [
+    "TOKİ İLAVE"
+  ],
+  "TRABZON": [
+    "TRABZON PROJE"
+  ],
+  "TRAKYA": [
+    "TRAKYA CAM",
+    "TRAKYA CAM ACİL",
+    "TRAKYA CAM C60 ACİL"
+  ],	
+  "TRAKYA CEPHE": [
+    "TRAKYA CEPHE",
+    "TRAKYA CEPHE ACİL",
+    "TRAKYA OTOMATİK KAPI"
+  ],
+  "TRN": [
+    "TRN ÖNAL MAKİNA",
+    "TRN ÖNAL MAKİNE"
+  ],
+  "TSA": [
+    "TSA",
+    "TSA 13 AKS MENTEŞE",
+    "TSA 40*25 SİPARİŞİ",
+    "TSA ACİL",
+    "TSA ACİLL",
+    "TSA ACİLLL",
+    "TSA ACİLLLL",
+    "TSA AHMET BEY",
+    "TSA AHMET BEY 4 VİLLA",
+    "TSA ANASTERİA",
+    "TSA AYDIN BEY ACİLL",
+    "TSA AYDIN BEY OTEL",
+    "TSA AYDINBEY",
+    "TSA AYDINBEY BÜKÜMLÜ",
+    "TSA AYDINBEY KEMERLİ",
+    "TSA AYDINBEY REST.",
+    "TSA AYŞEM ACİL",
+    "TSA AYŞEM HANIM",
+    "TSA BANKACI",
+    "TSA BANKACI ACİL",
+    "TSA C55 SİPARİŞİ",
+    "TSA CAM BAZA",
+    "TSA CAM BAZA KAPAĞI",
+    "TSA ÇOK ACİLLL",
+    "TSA DEPO SİPARİŞİ",
+    "TSA DERYA HANIM",
+    "TSA EKO KÖŞE TAKOZU",
+    "TSA EMİRELLER",
+    "TSA ERDEMBEY 5061",
+    "TSA ERDEMBEY İLAVE",
+    "TSA FAZİLET METAL",
+    "TSA GÖKYIL",
+    "TSA KAPAK",
+    "TSA KARGO",
+    "TSA KENT İNŞ SATIŞ OFİSİ",
+    "TSA KÖŞE TAKOZU",
+    "TSA KUMLUCA",
+    "TSA LOJMAN SİPARİŞİ",
+    "TSA MAYA OTEL",
+    "TSA MEGASARAY",
+    "TSA MEHMET BALIK",
+    "TSA MURAT BEY",
+    "TSA OTTO ACİL",
+    "TSA PR140",
+    "TSA PROJE SİPARİŞİ",
+    "TSA RİA",
+    "TSA RİA OTEL",
+    "TSA RİA OTEL 2",
+    "TSA RİA OTEL CEPHE",
+    "TSA SEBA MARE",
+    "TSA SEBA MARE EK SİP",
+    "TSA SENA HANIM",
+    "TSA SFC OTEL SİPARİŞİ",
+    "TSA SİMENA VİLLA ACİLLL",
+    "TSA SİPARİŞ",
+    "TSA SİPARİŞİ",
+    "TSA SL28 SİPARİŞİ",
+    "TSA STOK  SİPARİŞ",
+    "TSA STOK SİPARİŞİ",
+    "TSA TE62D",
+    "TSA TORBA İMALAT",
+    "TSA YANGIN KAPISI",
+    "TSA YENİ BAZA SİPARİŞİ",
+    "TSA YENİ KALIP",
+    "TSA YENİ KALIP ACİL",
+    "TSA YENİ KALIP SİPARİŞİ",
+    "TSA YENİ KALIPLAR",
+    "TSA YENİ SİSTEM ACİLLL",
+    "TSA YENİ SİSTEM KALIPLARI",
+    "TSA YENİ SİSTEM SİPARİŞİ"
+  ],
+  "TUNALI": [
+    "TUNALI YAPI",
+    "TUNALI YAPI FASON"
+  ],
+  "TURHAN": [
+    "TURHAN EFECAN"
+  ],
+  "UĞUR": [
+    "UĞUR",
+    "UĞUR ACİL",
+    "UĞUR ACİLL",
+    "UĞUR ACİLLL",
+    "UĞUR ACİLLLL",
+    "UĞUR FASON",
+    "UĞUR FASONN",
+    "UĞUR FASONNNNN",
+    "UĞUR SİNEKLİK",
+    "UĞUR STOK",
+    "UĞURR",
+    "UĞURRR",
+    "UĞURRRRR",
+    "UĞUURRR",
+	"UGUR ACİL",
+    "UGUR BEY FASON",
+    "UGUR FASON"
+  ],
+  "UYSAL": [
+    "UYSAL ACİL",
+    "UYSAL BORA ACİLL",
+    "UYSAL CENTROL ACİL",
+    "UYSAL GARDENYA ACİLLL",
+    "UYSAL İLAVE",
+    "UYSAL SUİT TERAS",
+    "UYSAL SUİT TERAS ACİL",
+    "UYSAL VİLLALAR",
+    "UYSAL VİLLALAR ACİL",
+    "UYSAL YAPI",
+    "UYSAL YAPI İLAVE"
+  ],
+  "ÜNSELİLİ": [
+    "ÜNSELİLİ C60 BİNA",
+    "ÜNSELİLİ GÖL MAHAL 1",
+	"ÜNSELİ",
+    "ÜNSELİ ACİL",
+    "ÜNSELİ DÜKKAN DOĞRAMA C60",
+    "ÜNSELİ SERAMİK CEPHE",
+    "ÜNSELİ VİLLA",
+    "ÜNSELİ VİLLA ACİL",
+	"ÜNSİLELİ",
+    "ÜNSİLELİ  SÜRME İLAV",
+    "ÜNSİLELİ ACİL",
+    "ÜNSİLELİ DAİRE"
+  ],
+  "VAHİT": [
+    "VAHİT",
+    "VAHİT ALM",
+    "VAHİT ALM BODRUM İLAVE",
+    "VAHİT ALM BODRUM SL38T",
+    "VAHİT ALM BODRUM TH62",
+    "VAHİT ALM EKSİK GİDEN ACİL",
+    "VAHİT ALM ERGENE",
+    "VAHİT ALM ERGENE ACİLL",
+    "VAHİT ALM ERGENE C55",
+    "VAHİT ALM ERGENE CEPHE",
+    "VAHİT ALM ERGENE TH55",
+    "VAHİT ALM HASANBAŞOĞLU",
+    "VAHİT ALM MARMARİS",
+    "VAHİT ALM MİGROS",
+    "VAHİT ALM SINDIRAÇ DİŞ"
+  ],
+  "VAROL": [
+    "VAROL PEN",
+    "VAROLPEN ACİLLL",
+    "VAROLPEN İLAVE"
+  ],
+  "VENÜS": [
+    "VENÜS",
+    "VENÜS ALM",
+    "VENÜS C60 TH62",
+    "VENÜS ERZURUM",
+    "VENÜS MALATYA TOKİ",
+    "VENÜS YUSUF C60"
+  ],
+  "VİZE": [
+    "VİZE MERMER"
+  ],
+  "VOLKAN": [
+    "VOLKAN ALM",
+    "VOLKAN ALM ACİLL",
+    "VOLKAN ALM SİPARİŞİ"
+  ],
+  "WEST": [
+    "WEST MAKİNA"
+  ],
+  "Y.SANAYİ": [
+    "Y.SANAYİ ATA ALM",
+    "Y.SANAYİ CEPHE",
+    "Y.SANAYİ CS GOLD"
+  ],
+  "YENİÇİFTLİK": [
+    "YENİÇİFTLİK MÜŞTERİSİ"
+  ],
+  "YEŞİLKÖY": [
+    "YEŞİLKÖY",
+    "YEŞİLKÖY LOVA ACİL",
+    "YEŞİLKÖY NUMUNE",
+    "YEŞİLKÖY NUMUNEKESTİ",
+    "YEŞİLKÖY PROJE",
+    "YEŞİLKÖY PROJE ACİL"
+  ],
+  "YILDIZ": [
+    "YILDIZ PLASTİK"
+  ],
+  "YSA": [
+    "YSA YENİ KALIP"
+  ],
+  "YUVAKURAN": [
+    "YUVAKURAN",
+    "YUVAKURAN ACİL"
+  ],
+  "ZAFER": [
+    "ZAFER DOĞRAMA",
+    "ZAFER İNŞ",
+    "ZAFER MÜŞTERİSİ",
+    "ZAFER PEN",
+    "ZAFER PEN SARAY",
+    "ZAFERPEN SARAY"
+  ],
+  "ZAFER KESKİN": [
+	"ZAFER KESKİN"
+  ],
+  "ZAİMOĞLU": [
+    "ZAİMOĞLU",
+    "ZAİMOĞLU  SRL UGUR",
+    "ZAİMOĞLU ACİL",
+    "ZAİMOĞLU ACİLL",
+    "ZAİMOĞLU ADLİ TIP",
+    "ZAİMOĞLU ANA OKULU",
+    "ZAİMOĞLU ANK PROJE",
+    "ZAİMOĞLU ÇORLU ANA",
+    "ZAİMOĞLU FASON",
+    "ZAİMOĞLU FORD",
+    "ZAİMOĞLU G KIRICI",
+    "ZAİMOĞLU GALATA İNŞ",
+    "ZAİMOĞLU HAYRABOLU",
+    "ZAİMOĞLU İZMİR",
+    "ZAİMOĞLU K ELİ ORG CAMİİ",
+    "ZAİMOĞLU K ELİ OSB CAMİ",
+    "ZAİMOĞLU KAPAKLI",
+    "ZAİMOĞLU KARE KÜPEŞTE",
+    "ZAİMOĞLU MUES ESKİŞEHİR",
+    "ZAİMOĞLU MUES SAKARYA",
+    "ZAİMOĞLU NUSRATİYE OKUL",
+    "ZAİMOĞLU OSB",
+    "ZAİMOĞLU OSB CAMİİ",
+    "ZAİMOĞLU OSB KREŞ",
+    "ZAİMOĞLU POTİNOĞLU",
+    "ZAİMOĞLU SAKARYA",
+    "ZAİMOĞLU SAMSUN",
+    "ZAİMOĞLU SAMSUN ADLİ TIP",
+    "ZAİMOĞLU SRL",
+    "ZAİMOĞLU SRL FASON",
+    "ZAİMOĞLU UZUNKÖPRÜ",
+    "ZAİMOĞLU YAKUP",
+	"YAKUP ZAİMOĞLU"
+  ],
+  "ZEN": [
+    "ZEN OTOMATİK KAPI"
+  ],
+  "ZEYKER": [
+    "ZEYKER",
+    "ZEYKER ACİL",
+    "ZEYKER ACİLL",
+    "ZEYKER ACİLLL"
+  ],
+  "ZEYNEP": [
+    "ZEYNEP 1",
+    "ZEYNEP 2",
+    "ZEYNEP 3"
+  ],
+  "TEST": [
+    "TEST NUMUNE",
+    "TEST NUMUNE  CEPHE",
+    "TEST NUMUNE LS60"
+  ]
+}
