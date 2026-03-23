@@ -5,7 +5,12 @@ import pandas as pd
 import plotly.express as px
 import os
 import hashlib
+from rapidfuzz import fuzz
+import json
+import re
+import unicodedata
 
+MERGE_CACHE_FILE = "/tmp/musteri_merge_map.json"
 CACHE_DIR = "/tmp/cache_data"
 os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -26,6 +31,53 @@ COLUMN_ALIASES = {
 def normalize_col(s: str) -> str:
     return str(s).strip().lower().replace("ı", "i").replace("ş", "s").replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c")
 
+def clean_musteri(text):
+    if pd.isna(text):
+        return ""
+    
+    text = str(text).lower()
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
+    
+    blacklist = ["acil", "acilll", "erdem", "siparis", "order"]
+    for w in blacklist:
+        text = text.replace(w, "")
+    
+    text = re.sub(r'[^a-z0-9 ]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
+
+
+def group_customers(df, threshold=85):
+    groups = {}
+    
+    for name in df["musteri_siparis_no"]:
+        clean = clean_musteri(name)
+        
+        found = False
+        
+        for key in groups:
+            if fuzz.ratio(clean, key) >= threshold:
+                groups[key].append(name)
+                found = True
+                break
+        
+        if not found:
+            groups[clean] = [name]
+    
+    return groups
+
+def save_merge_map(groups):
+    with open(MERGE_CACHE_FILE, "w") as f:
+        json.dump(groups, f)
+
+
+def load_merge_map():
+    if os.path.exists(MERGE_CACHE_FILE):
+        with open(MERGE_CACHE_FILE, "r") as f:
+            return json.load(f)
+    return None
+    
 def get_file_hash(file_path: str) -> str:
     hasher = hashlib.md5()
     with open(file_path, "rb") as f:
@@ -756,6 +808,28 @@ def build_profit_simulation(scope_df: pd.DataFrame) -> pd.DataFrame:
     ]
 
     return df
+
+def build_customer_merge_table(df):
+
+    groups = load_merge_map()
+
+    if groups is None:
+        groups = group_customers(df)
+        save_merge_map(groups)
+
+    rows = []
+
+    for key, vals in groups.items():
+        unique_vals = list(set(vals))
+
+        rows.append({
+            "Ana Musteri": key,
+            "Farkli Yazim": len(unique_vals),
+            "Toplam Siparis": len(vals),
+            "Ornekler": ", ".join(unique_vals[:3])
+        })
+
+    return pd.DataFrame(rows).sort_values("Toplam Siparis", ascending=False)
 
 # =========================
 # 👤 CUSTOMER ENGINE
@@ -1631,6 +1705,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
 
     scope_df = filter_scope_data(df, selected_years, profil_ara)
+    merge_df = build_customer_merge_table(scope_df)
     filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
 
     hedef_uretim = int(hedef_uretim)
@@ -1722,7 +1797,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         forecast_df,
         forecast_chart(forecast_df),
         scenario_md,
-        scenario_df
+        scenario_df,
+        merge_df
     )
 
 
@@ -1856,6 +1932,12 @@ with gr.Blocks(
                 
                     musteri_ozet = gr.Dataframe(label="Müşteri Özeti")
                     musteri_yorum = gr.Markdown()
+
+                with gr.Tab("🧩 Müşteri Birleştirme"):
+                
+                    gr.Markdown("## 🧠 Otomatik Müşteri Gruplama")
+                
+                    merge_table = gr.Dataframe(label="Gruplanmış Müşteriler")
 
                 with gr.Tab("📊 Yönetim Dashboard"):
                     gr.Markdown("## 📊 Yönetim Dashboard")
@@ -1994,7 +2076,8 @@ with gr.Blocks(
             forecast_table,
             forecast_plot,
             scenario_md_box,
-            scenario_table
+            scenario_table,
+            merge_table
         ],
     )
 
