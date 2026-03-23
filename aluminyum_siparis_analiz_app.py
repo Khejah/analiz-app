@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.express as px
 import os
 import hashlib
-from rapidfuzz import fuzz
+from difflib import SequenceMatcher
 import json
 import re
 import unicodedata
@@ -57,7 +57,7 @@ def group_customers(df, threshold=85):
         found = False
         
         for key in groups:
-            if fuzz.ratio(clean, key) >= threshold:
+            if SequenceMatcher(None, clean, key).ratio() * 100 >= threshold:
                 groups[key].append(name)
                 found = True
                 break
