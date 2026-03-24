@@ -1968,19 +1968,23 @@ with gr.Blocks(
     # ✅ HEADER
     gr.HTML("""
     <div style="display:flex; align-items:center; gap:16px;">
-        <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:60px;">
+        <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:80px;">
         
         <div>
             <h1 style="margin:0;">
-                🏭 Üretim Analiz & Karar Destek Platformu
+                🏭 Üretim Analiz ve Karar Destek Platformu
             </h1>
             
-            <p style="margin:4px 0; font-size:14px; color:#666;">
-                Sipariş verilerinden operasyonel içgörü üretin, üretimi optimize edin ve stok kararlarını veriye dayalı yönetin.
+            <p style="margin:4px 0; font-size:14px; color:#444;">
+                Üretim verilerini anlamlı içgörülere dönüştürün, 
+                operasyonel verimliliği artırın ve doğru stok kararlarını veriyle yönetin.
             </p>
             
-            <p style="font-size:12px; color:#999; margin:4px 0;">
-                ✔ Küçük Sipariş Analizi • ✔ ABC Stok Modeli • ✔ Yönetici Dashboard
+            <p style="font-size:13px; color:#777; margin:4px 0;">
+                ✔ Küçük Sipariş Analizi  
+                ✔ ABC Stok Modeli  
+                ✔ Talep Tahmini & Senaryo Analizi  
+                ✔ Yönetici Dashboard
             </p>
         </div>
     </div>
@@ -1994,16 +1998,25 @@ with gr.Blocks(
 
             with gr.Tabs():
 
-                with gr.Tab("📉 En Az Üretime Giren Ürünlerin Listesi"):
+                with gr.Tab("📉 Küçük Sipariş Analizi (Operasyonel Yük)"):
                     summary_small = gr.Markdown()
+                    gr.Markdown("""
+                    ### 📌 Bu ekran neyi gösterir?
+                    
+                    Bu bölüm küçük siparişlerin üretim üzerindeki etkisini analiz eder.
+                    
+                    - Çok sayıda küçük sipariş → planlama yükü oluşturur  
+                    - Düşük üretim katkısı → verimsizlik göstergesidir  
+                    
+                    Amaç: operasyonel yükü azaltmak
+                    """)
 
                     with gr.Row():
-                        chart1 = gr.Plot(label="Boy dağılımı")
-                        chart2 = gr.Plot(label="Top profiller")
-
-                    chart3 = gr.Plot(label="Aylık trend")
-                    chart4 = gr.Plot(label="Küçük Boy Sipariş Yükü")
-
+                        chart1 = gr.Plot(label="📊 Sipariş Boy Dağılımı")
+                        chart2 = gr.Plot(label="🏆 En Sık Sipariş Edilen Profiller")
+                        chart3 = gr.Plot(label="📈 Sipariş Yoğunluk Trendi")
+                        chart4 = gr.Plot(label="⚠️ Küçük Siparişlerin Üretime Etkisi")
+                        
                     with gr.Tabs():
                         with gr.Tab("Boy Kırılımı"):
                             boy_table = gr.Dataframe(interactive=False, wrap=True)
@@ -2015,7 +2028,7 @@ with gr.Blocks(
                             profile_table = gr.Dataframe(interactive=False, wrap=True)
 
                             gr.Markdown("## 🔍 Profil Detay")
-                            profil_sec = gr.Dropdown(label="Profil seç", choices=[])
+                            profil_sec = gr.Dropdown(label="🔍 Detay İncelenecek Profil", choices=[])
 
                             detail_summary = gr.Markdown()
                             detail_year = gr.Dataframe(label="Yıllık Detay")
@@ -2031,10 +2044,9 @@ with gr.Blocks(
                     never_summary_md = gr.Markdown()
                 
                     with gr.Row():
-                        never_chart1 = gr.Plot(label="Boy dağılımı")
-                        never_chart2 = gr.Plot(label="Top profiller")
-                
-                    never_chart3 = gr.Plot(label="Aylık trend")
+                        never_chart1 = gr.Plot(label="📊 Sipariş Boy Dağılımı")
+                        never_chart2 = gr.Plot(label="🏆 Profil Yoğunluğu")
+                        never_chart3 = gr.Plot(label="📈 Zaman Bazlı Trend")
                 
                     with gr.Tabs():
                         with gr.Tab("Boy Kırılımı"):
@@ -2049,7 +2061,7 @@ with gr.Blocks(
                         with gr.Tab("Ham Kayıt Önizleme"):
                             never_raw_table = gr.Dataframe(interactive=False, wrap=True)
 
-                with gr.Tab("📈 En Çok Üretime Giren Ürünlerin Listesi"):
+                with gr.Tab("📈 Büyük Sipariş Analizi (Core Üretim)"):
                     high_summary = gr.Markdown()
                     high_chart = gr.Plot(label="En Çok Üretime Giren Profiller")
 
@@ -2064,11 +2076,30 @@ with gr.Blocks(
                             high_raw_table = gr.Dataframe(interactive=False, wrap=True)
 
                 with gr.Tab("📦 ABC Analizi ve Stok Önerisi"):
+                    gr.Markdown("""
+                    ### 📌 ABC Analizi
+                    
+                    - 🟢 A → Kritik (stok yapılmalı)  
+                    - 🟡 B → Planlı üretim  
+                    - 🔴 C → Sipariş bazlı üretim  
+                    
+                    Amaç: stok ve üretim stratejisini optimize etmek
+                    """)
                     abc_summary = gr.Markdown()
                     abc_plot = gr.Plot(label="ABC Analizi")
                     abc_table = gr.Dataframe(interactive=False, wrap=True)
 
                 with gr.Tab("🧠 Yönetici Özeti"):
+                    gr.Markdown("""
+                    ### 📌 Bu ekran ne sağlar?
+                    
+                    Tüm analizlerin özetini tek ekranda sunar.
+                    
+                    ✔ Verimlilik  
+                    ✔ Kalıp değişim etkisi  
+                    ✔ Kritik profiller  
+                    ✔ Aksiyon önerileri  
+                    """)
                     exec_summary_md = gr.Markdown()
 
                 with gr.Tab("🔍 Kök Neden Analizi"):
@@ -2077,13 +2108,23 @@ with gr.Blocks(
 
                 with gr.Tab("👤 Müşteri Analizi"):
             
-                    musteri_sec = gr.Dropdown(label="Müşteri seç", choices=[])
+                    musteri_sec = gr.Dropdown(label="👤 Analiz Edilecek Müşteri", choices=[])
                 
                     musteri_ozet = gr.Dataframe(label="Müşteri Özeti")
                     musteri_yorum = gr.Markdown()
 
                 with gr.Tab("📊 Yönetim Dashboard"):
                     gr.Markdown("## 📊 Yönetim Dashboard")
+                    gr.Markdown("""
+                    ### 📌 Genel Durum
+                    
+                    Bu ekran üretimin genel performansını gösterir:
+                    
+                    - Üretim hacmi  
+                    - Sipariş yoğunluğu  
+                    - Pres performansı  
+                    - Termin uyumu  
+                    """)
 
                     dashboard_kpi_table = gr.Dataframe(label="KPI Özeti", interactive=False, wrap=True)
 
@@ -2130,48 +2171,53 @@ with gr.Blocks(
         # ✅ SAĞ → STICKY PANEL
         with gr.Column(scale=1, elem_id="side-panel"):
 
-            gr.Markdown("### 📊 Analizi Başlat")
+            gr.Markdown("""
+            ### ⚙️ Analiz Parametreleri
+            
+            Lütfen analiz etmek istediğiniz veri ve kriterleri seçin.
+            Sistem bu parametrelere göre otomatik içgörü üretir.
+            """)
 
-            excel_file = gr.File(label="Excel dosyası", file_types=[".xlsx", ".xls"])
-
+            excel_file = gr.File(label="📂 Veri Dosyası Yükle")
+            
             secilen_boy = gr.Dropdown(
-                label="Boy seç",
+                label="🎯 Hedef Sipariş Boyu",
                 choices=[str(i) for i in range(10, 0, -1)],
                 value="10"
             )
 
             mod = gr.Dropdown(
-                label="Filtre modu",
+                label="⚙️ Analiz Türü",
                 choices=["Seçilen boy", "Seçilen boy ve altı"],
                 value="Seçilen boy ve altı"
             )
 
-            years = gr.CheckboxGroup(label="Yıllar", choices=[])
+            years = gr.CheckboxGroup(label="📅 Analiz Dönemi", choices=[])
 
-            profil_ara = gr.Textbox(label="Profil ara", placeholder="Örn: TH62-01")
+            profil_ara = gr.Textbox(label="🔎 Profil Filtre", placeholder="Örn: TH62-01")
 
             hedef_uretim = gr.Dropdown(
-                label="Yılda Kaç Kez Üretim?",
+                label="🏭 Yıllık Üretim Frekansı",
                 choices=["4", "6", "12"],
                 value="4"
             )
 
             top_n_sec = gr.Dropdown(
-                label="Grafiklerde kaç profil?",
+                label="📊 Grafik Detay Seviyesi",
                 choices=["15", "50", "100"],
                 value="15"
             )
 
             hedef_kucuk_oran = gr.Slider(
-                label="Küçük sipariş oranı (%)",
+                label="🎯 Hedef Küçük Sipariş Oranı (%)",
                 minimum=1,
                 maximum=30,
                 value=10,
                 step=1
             )
 
-            load_btn = gr.Button("Yılları yükle")
-            analyze_btn = gr.Button("🚀 Analizi çalıştır", variant="primary")
+            load_btn = gr.Button("📅 Yılları Yükle")
+            analyze_btn = gr.Button("🚀 Analizi Başlat", variant="primary")
 
     load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
     
