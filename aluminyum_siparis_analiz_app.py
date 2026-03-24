@@ -346,8 +346,16 @@ def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFram
                 "Toplam Kg": float(round(row["toplam_kg"], 2)),
             })
 
-    return pd.DataFrame(rows)
-
+    result = pd.DataFrame(rows)
+    result = result.rename(columns={
+        "Boy": "Sipariş Boyu",
+        "Toplam Sipariş Kalemi": "Bu Boydaki Kayıt Sayısı",
+        "Farklı Sipariş Sayısı": "Bu Boydaki Farklı Sipariş Sayısı",
+        "Farklı Profil Sayısı": "Bu Boydaki Farklı Profil Sayısı",
+        "Toplam Üretilen Boy": "Bu Boydaki Toplam Üretim",
+        "Toplam Kg": "Bu Boydaki Toplam Ağırlık (Kg)"
+    })
+    return result
 
 def build_profile_detail(df: pd.DataFrame, profil_kodu: str, yillar):
     data = df[df["profil"] == profil_kodu].copy()
@@ -412,18 +420,18 @@ def build_profile_summary(filtered: pd.DataFrame, hedef_uretim: int) -> pd.DataF
 
     profile.columns = [
         "Profil Kodu",
-        "Toplam Sipariş Kalemi",
+        "Toplam Kayıt Sayısı",
         "Farklı Sipariş Sayısı",
-        "Toplam Üretilen Boy",
-        "İlk Sipariş Tarihi",
-        "Son Sipariş Tarihi",
-        "Sipariş Başına Ortalama Boy",
-        "Yıllık Tüketim",
-        "Yeni Akıllı Öneri (Boy)"
+        "Toplam Üretim (Boy)",
+        "İlk Görülen Sipariş Tarihi",
+        "Son Görülen Sipariş Tarihi",
+        "Sipariş Başına Ortalama Üretim",
+        "Yıllık Ortalama Tüketim",
+        "Önerilen Stok / Parti Boyu"
     ]
 
     return profile.sort_values(
-        ["Toplam Sipariş Kalemi", "Toplam Üretilen Boy"],
+        ["Toplam Kayıt Sayısı", "Toplam Üretim (Boy)"],
         ascending=[False, False]
     )
 
@@ -471,18 +479,18 @@ def build_high_volume_profile_summary(scope_df: pd.DataFrame, min_boy: int, hede
 
     profile.columns = [
         "Profil Kodu",
-        "Toplam Sipariş Kalemi",
+        "Toplam Kayıt Sayısı",
         "Farklı Sipariş Sayısı",
-        "Toplam Üretilen Boy",
-        "İlk Sipariş Tarihi",
-        "Son Sipariş Tarihi",
-        "Sipariş Başına Ortalama Boy",
-        "Yıllık Tüketim",
-        "Yeni Akıllı Öneri (Boy)"
+        "Toplam Üretim (Boy)",
+        "İlk Görülen Sipariş Tarihi",
+        "Son Görülen Sipariş Tarihi",
+        "Sipariş Başına Ortalama Üretim",
+        "Yıllık Ortalama Tüketim",
+        "Önerilen Stok / Parti Boyu"
     ]
 
     return profile.sort_values(
-        ["Toplam Üretilen Boy", "Toplam Sipariş Kalemi"],
+        ["Toplam Üretim (Boy)", "Toplam Kayıt Sayısı"],
         ascending=[False, False]
     )
 
@@ -521,11 +529,11 @@ def build_dashboard_kpis(scope_df: pd.DataFrame) -> pd.DataFrame:
     toplam_kg = float(scope_df["kg"].fillna(0).sum())
 
     kpi_rows = [
-        {"KPI": "Toplam Sipariş Satırı", "Değer": f"{toplam_satir:,}"},
-        {"KPI": "Benzersiz Sipariş", "Değer": f"{benzersiz_siparis:,}"},
-        {"KPI": "Benzersiz Profil", "Değer": f"{benzersiz_profil:,}"},
-        {"KPI": "Toplam Üretilen Boy", "Değer": f"{toplam_adet:,}"},
-        {"KPI": "Toplam Kg", "Değer": f"{toplam_kg:,.2f}"},
+        {"KPI": "Toplam Kayıt Sayısı", "Değer": f"{toplam_satir:,}"},
+        {"KPI": "Farklı Sipariş Sayısı", "Değer": f"{benzersiz_siparis:,}"},
+        {"KPI": "Farklı Profil Sayısı", "Değer": f"{benzersiz_profil:,}"},
+        {"KPI": "Toplam Üretim (Boy)", "Değer": f"{toplam_adet:,}"},
+        {"KPI": "Toplam Ağırlık (Kg)", "Değer": f"{toplam_kg:,.2f}"},
     ]
     return pd.DataFrame(kpi_rows)
 
@@ -730,14 +738,14 @@ def high_volume_summary_markdown(scope_df: pd.DataFrame, min_boy: int) -> str:
         "### En Çok Üretime Giren Ürünler Özeti",
         f"- Kriter: **{min_boy} boy ve üstü**",
         f"- Tarih aralığı: **{yil_min} - {yil_max}**",
-        f"- Toplam sipariş satırı: **{toplam_satir:,}**",
-        f"- Benzersiz sipariş sayısı: **{toplam_siparis:,}**",
-        f"- Benzersiz profil sayısı: **{toplam_profil:,}**",
+        f"- Toplam kayıt sayısı: **{toplam_satir:,}**",
+        f"- Farklı sipariş sayısı: **{toplam_siparis:,}**",
+        f"- Farklı profil sayısı: **{toplam_profil:,}**",
         f"- Toplam üretilen boy: **{toplam_adet:,}**",
         f"- Toplam kg: **{toplam_kg:,.2f}**",
-        f"- Ortalama sipariş boyu: **{ort_boy:,}**",
+        f"- Sipariş başına ortalama boy: **{ort_boy:,}**",
         f"- En çok üretime giren profil: **{lider_profil}**",
-        f"- Bu profilin toplam üretimi: **{lider_adet:,} boy**",
+        f"- Bu profilin toplam üretim miktarı: **{lider_adet:,} boy**",
     ]
 
     return "\n".join(lines)
@@ -810,14 +818,14 @@ def build_abc_analysis(scope_df: pd.DataFrame, hedef_uretim: int) -> pd.DataFram
 
     profile.columns = [
         "Profil Kodu",
-        "Toplam Üretilen Boy",
-        "Toplam Sipariş Kalemi",
+        "Toplam Üretim (Boy)",
+        "Toplam Kayıt Sayısı",
         "Farklı Sipariş Sayısı",
-        "Yıllık Tüketim",
-        "Yeni Akıllı Öneri (Boy)",
-        "Kümülatif Pay (%)",
+        "Yıllık Ortalama Tüketim",
+        "Önerilen Stok / Parti Boyu",
+        "Toplam İçindeki Kümülatif Pay (%)",
         "ABC Sınıfı",
-        "Stok Önerisi"
+        "Stok Kararı"
     ]
 
     return profile
@@ -915,8 +923,8 @@ def build_customer_detail(scope_df: pd.DataFrame, musteri_adi: str, secilen_boy:
     buyuk_adet_oran = (buyuk_adet / toplam_adet * 100) if toplam_adet else 0
 
     summary_df = pd.DataFrame([
-        ["Seçilen Müşteri Grubu", musteri_adi],
-        ["Gruptaki Alt Kayıt Sayısı", len(grup_listesi)],
+        ["İncelenen Müşteri Grubu", musteri_adi],
+        ["Bu gruba bağlı alt müşteri/kod sayısı", len(grup_listesi)],
         ["Toplam Sipariş Kalemi", toplam_satir],
         ["Farklı Sipariş Sayısı", farkli_siparis],
         ["Farklı Profil Sayısı", farkli_profil],
@@ -1029,8 +1037,13 @@ def build_forecast_table(scope_df: pd.DataFrame) -> pd.DataFrame:
     monthly["forecast_3_ay_ort"] = monthly["forecast_3_ay_ort"].fillna(monthly["toplam_adet"])
     monthly["sapma"] = (monthly["toplam_adet"] - monthly["forecast_3_ay_ort"]).round(2)
 
+    monthly = monthly.rename(columns={
+        "ay": "Ay",
+        "toplam_adet": "Gerçekleşen Üretim",
+        "forecast_3_ay_ort": "3 Aylık Ortalama Tahmin",
+        "sapma": "Tahmin Sapması"
+    })
     return monthly
-
 
 def forecast_chart(forecast_df: pd.DataFrame):
     if forecast_df.empty:
@@ -1038,8 +1051,8 @@ def forecast_chart(forecast_df: pd.DataFrame):
 
     fig = px.line(
         forecast_df,
-        x="ay",
-        y=["toplam_adet", "forecast_3_ay_ort"],
+        x="Ay",
+        y=["Gerçekleşen Üretim", "3 Aylık Ortalama Tahmin"],
         markers=True,
         title="Aylık Gerçekleşen ve 3 Aylık Hareketli Ortalama",
     )
@@ -1339,8 +1352,8 @@ def build_executive_summary(scope_df, abc_df, secilen_boy, hedef_kucuk_oran):
     forecast_df = build_forecast_table(scope_df)
 
     if not forecast_df.empty:
-        son_gercek = forecast_df.iloc[-1]["toplam_adet"]
-        son_tahmin = forecast_df.iloc[-1]["forecast_3_ay_ort"]
+        son_gercek = forecast_df.iloc[-1]["Gerçekleşen Üretim"]
+        son_tahmin = forecast_df.iloc[-1]["3 Aylık Ortalama Tahmin"]
         lines.append("")
         lines.append("## 📈 Kısa Vadeli Tahmin")
         lines.append(f"- Son gerçekleşen aylık üretim: **{int(son_gercek):,} boy**")
@@ -1407,7 +1420,17 @@ def build_year_summary(filtered: pd.DataFrame) -> pd.DataFrame:
         toplam_kg=("kg", "sum"),
     )
     year["toplam_kg"] = year["toplam_kg"].round(2)
-    return year.sort_values("yil")
+
+    year = year.rename(columns={
+        "yil": "Yıl",
+        "satir_sayisi": "Toplam Kayıt Sayısı",
+        "benzersiz_siparis": "Farklı Sipariş Sayısı",
+        "benzersiz_profil": "Farklı Profil Sayısı",
+        "toplam_adet": "Toplam Üretim (Boy)",
+        "toplam_kg": "Toplam Ağırlık (Kg)"
+    })
+    
+    return year.sort_values("Yıl")
 
 
 def top_profiles_chart(profile_summary: pd.DataFrame, top_n_value: int):
@@ -1419,11 +1442,11 @@ def top_profiles_chart(profile_summary: pd.DataFrame, top_n_value: int):
 
     fig = px.bar(
         top_n,
-        x="Toplam Sipariş Kalemi",
+        x="Toplam Sipariş Sayısı",
         y="Profil Kodu",
         orientation="h",
         title=f"En sık geçen profiller (ilk {top_n_value})",
-        text="Toplam Sipariş Kalemi",
+        text="Toplam Sipariş Sayısı",
         hover_data=["Farklı Sipariş Sayısı", "Toplam Üretilen Boy"],
     )
 
@@ -1463,16 +1486,16 @@ def boy_breakdown_chart(boy_breakdown: pd.DataFrame):
         return None
 
     fig = px.bar(
-        boy_breakdown.sort_values("Boy"),
-        x="Boy",
-        y="Toplam Sipariş Kalemi",
+        boy_breakdown.sort_values("Sipariş Boyu"),
+        x="Sipariş Boyu",
+        y="Bu Boydaki Kayıt Sayısı",
         title="Boylara Göre Sipariş Dağılımı",
-        text="Toplam Sipariş Kalemi",
+        text="Bu Boydaki Kayıt Sayısı",
         hover_data=[
-            "Farklı Sipariş Sayısı",
-            "Farklı Profil Sayısı",
-            "Toplam Üretilen Boy",
-            "Toplam Kg"
+            "Bu Boydaki Farklı Sipariş Sayısı",
+            "Bu Boydaki Farklı Profil Sayısı",
+            "Bu Boydaki Toplam Üretim",
+            "Bu Boydaki Toplam Ağırlık (Kg)"
         ],
     )
 
@@ -1711,14 +1734,22 @@ def summary_markdown(
 
     lines = [
         "### Özet Bilgi",
-        f"- Filtre modu: **{mod}**",
-        f"- Seçilen üst sınır / hedef boy: **{secilen_boy}**",
-        f"- Tarih aralığı: **{yil_min} - {yil_max}**",
-        f"- Toplam sipariş satırı: **{len(filtered):,}**",
-        f"- Benzersiz sipariş no: **{filtered['siparis_no'].nunique():,}**",
-        f"- Benzersiz profil: **{filtered['profil'].nunique():,}**",
-        f"- Toplam adet: **{int(filtered['adet'].sum()):,}**",
-        f"- Toplam kg: **{filtered['kg'].fillna(0).sum():,.2f}**",
+        f"- İncelenen sipariş tipi: **{mod}**",
+        f"  - Bu seçim, sadece tam {secilen_boy} boy olan siparişlerin mi yoksa {secilen_boy} boy ve altındaki tüm siparişlerin mi analiz edildiğini gösterir.",
+        f"- Küçük sipariş eşiği: **{secilen_boy} boy**",
+        f"  - Bu değerin altındaki veya eşit siparişler küçük sipariş olarak kabul edilir.",
+        f"- İncelenen tarih aralığı: **{yil_min} - {yil_max}**",
+        f"  - Analize dahil edilen verilerin hangi yılları kapsadığını gösterir.",
+        f"- Toplam kayıt sayısı: **{len(filtered):,}**",
+        f"  - Filtreye uyan toplam satır sayısıdır. Her satır bir sipariş kaydını temsil eder.",
+        f"- Farklı sipariş sayısı: **{filtered['siparis_no'].nunique():,}**",
+        f"  - Tekrarsız sipariş numarası sayısıdır. Aynı sipariş numarası birden fazla satırda geçiyorsa burada bir kez sayılır.",
+        f"- Farklı profil kodu sayısı: **{filtered['profil'].nunique():,}**",
+        f"  - Analize giren farklı ürün/profil çeşidi sayısıdır.",
+        f"- Toplam üretilen boy: **{int(filtered['adet'].sum()):,}**",
+        f"  - Filtreye giren tüm kayıtların toplam üretim miktarıdır.",
+        f"- Toplam ağırlık: **{filtered['kg'].fillna(0).sum():,.2f} kg**",
+        f"  - Filtreye giren tüm kayıtların toplam kilogram karşılığıdır.",
         "",
         "### Genel Yük Değerlendirmesi",
         "",
@@ -1728,13 +1759,10 @@ def summary_markdown(
         f"  - Büyük sipariş (>{secilen_boy}): **{buyuk_satir:,}**",
         "",
         "### 🔩 Üretim Dağılımı",
-        f"- Toplam üretim: **{toplam_scope_adet:,}**",
-        f"  - Küçük sipariş üretimi: **{kucuk_adet:,}**",
-        f"  - Büyük sipariş üretimi: **{buyuk_adet:,}**",
-        f"- Kapsamdaki toplam sipariş satırı: **{toplam_scope_satir:,}**",
-        f"- {secilen_boy} boy ve altı satırlar, toplam listenin **%{satir_yuzde:.1f}**'ini oluşturuyor",
-        f"- Kapsamdaki toplam üretim adedi: **{toplam_scope_adet:,}**",
-        f"- {secilen_boy} boy ve altı ürünler, toplam üretimin **%{adet_yuzde:.1f}**'ini oluşturuyor",
+        f"- Toplam kayıt içinde küçük siparişlerin payı: **%{satir_yuzde:.1f}**",
+        f"  - Yani tüm kayıtların ne kadarının küçük sipariş grubuna girdiğini gösterir.",
+        f"- Toplam üretim içinde küçük siparişlerin payı: **%{adet_yuzde:.1f}**",
+        f"  - Yani toplam üretimin ne kadarının küçük siparişlerden geldiğini gösterir.",
         f"- Yorum: **{yorum}**",
     ]
 
@@ -1784,16 +1812,16 @@ def never_exceed_summary_markdown(
         "",
         "### Tanım",
         f"- Bu sekmede sadece geçmişte **asla {secilen_boy} boy üstüne çıkmamış** profiller yer alır.",
-        f"- Yani listelenen her profil için maksimum sipariş boyu **≤ {secilen_boy}** şartını sağlar.",
+        f"- Yani bu listede yer alan profiller, geçmişte bir kez bile **{secilen_boy} boyun üzerine çıkmamıştır**.",
         "",
         "### Özet",
         f"- Tarih aralığı: **{yil_min} - {yil_max}**",
-        f"- Benzersiz profil sayısı: **{benzersiz_profil:,}**",
-        f"- Benzersiz sipariş sayısı: **{benzersiz_siparis:,}**",
-        f"- Toplam sipariş satırı: **{toplam_satir:,}**",
-        f"- Toplam üretilen boy: **{toplam_adet:,}**",
+        f"- Farklı profil sayısı: **{benzersiz_profil:,}**",
+        f"- Farklı sipariş sayısı: **{benzersiz_siparis:,}**",
+        f"- Toplam kayıt sayısı: **{toplam_satir:,}**",
+        f"- Toplam üretim: **{toplam_adet:,}**",
         f"- Toplam kg: **{toplam_kg:,.2f}**",
-        f"- Bu gruptaki maksimum boy: **{max_boy}**",
+        f"- Bu grupta görülen en yüksek sipariş boyu: **{max_boy}**",
         f"- Ortalama sipariş boyu: **{ort_boy}**",
         "",
         "### Genel İçindeki Payı",
@@ -1937,11 +1965,13 @@ def load_profile_detail(profil, excel_file, secilen_boy, mod, yillar):
     yearly, boy_dist, toplam, siparis = build_profile_detail(filtered, profil, selected_years)
 
     summary = f"""
-### Profil Özeti
-
-- Toplam tüketim: **{toplam} boy**
-- Sipariş sayısı: **{siparis}**
-"""
+    ### Profil Özeti
+    
+    - Toplam üretim: **{toplam} boy**
+      - Bu profil için analiz döneminde gerçekleşen toplam üretim miktarıdır.
+    - Farklı sipariş sayısı: **{siparis}**
+      - Bu profilin kaç ayrı siparişte geçtiğini gösterir.
+    """
 
     return yearly, boy_dist, summary
 
