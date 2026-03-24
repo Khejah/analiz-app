@@ -25,6 +25,23 @@ COLUMN_ALIASES = {
     "termin_hafta": ["Termin Hafta", "termin_hafta"],
 }
 
+UI_COLS = {
+    "profil": "Profil Kodu",
+    "toplam_kayit": "Toplam Kayıt Sayısı",
+    "farkli_siparis": "Farklı Sipariş Sayısı",
+    "toplam_uretim": "Toplam Üretim (Boy)",
+    "ilk_tarih": "İlk Görülen Sipariş Tarihi",
+    "son_tarih": "Son Görülen Sipariş Tarihi",
+    "siparis_ort": "Sipariş Başına Ortalama Üretim",
+    "yillik_tuketim": "Yıllık Ortalama Tüketim",
+    "onerilen_parti": "Önerilen Stok / Parti Boyu",
+    "kumulatif_pay": "Toplam İçindeki Kümülatif Pay (%)",
+    "stok_karari": "Stok Kararı",
+    "abc_sinifi": "ABC Sınıfı",
+    "toplam_kg": "Toplam Kg",
+    "siparis_sayisi": "Sipariş Sayısı",
+}
+
 def normalize_col(s: str) -> str:
     s = str(s).strip().lower()
     s = s.replace("ı", "i").replace("İ", "i").replace("I", "i")
@@ -382,15 +399,15 @@ def build_profile_detail(df: pd.DataFrame, profil_kodu: str, yillar):
 def build_profile_summary(filtered: pd.DataFrame, hedef_uretim: int) -> pd.DataFrame:
     if filtered.empty:
         return pd.DataFrame(columns=[
-            "Profil Kodu",
-            "Toplam Kayıt Sayısı",
-            "Farklı Sipariş Sayısı",
-            "Toplam Üretilen Boy",
-            "İlk Sipariş Tarihi",
-            "Son Sipariş Tarihi",
-            "Sipariş Başına Ortalama Boy",
-            "Yıllık Tüketim",
-            "Yeni Akıllı Öneri (Boy)"
+            UI_COLS["profil"],
+            UI_COLS["toplam_kayit"],
+            UI_COLS["farkli_siparis"],
+            UI_COLS["toplam_uretim"],
+            UI_COLS["ilk_tarih"],
+            UI_COLS["son_tarih"],
+            UI_COLS["siparis_ort"],
+            UI_COLS["yillik_tuketim"],
+            UI_COLS["onerilen_parti"],
         ])
 
     profile = filtered.groupby("profil", as_index=False).agg(
@@ -410,46 +427,43 @@ def build_profile_summary(filtered: pd.DataFrame, hedef_uretim: int) -> pd.DataF
 
     yil_sayisi = max(filtered["yil"].nunique(), 1)
 
-    profile["Yıllık Tüketim"] = (
+    profile[UI_COLS["yillik_tuketim"]] = (
         profile["toplam_uretilen_boy"] / yil_sayisi
     ).round(0)
-
-    profile["Yeni Akıllı Öneri (Boy)"] = (
-        profile["Yıllık Tüketim"] / hedef_uretim
+    
+    profile[UI_COLS["onerilen_parti"]] = (
+        profile[UI_COLS["yillik_tuketim"]] / hedef_uretim
     ).round(0)
 
-    profile.columns = [
-        "Profil Kodu",
-        "Toplam Kayıt Sayısı",
-        "Farklı Sipariş Sayısı",
-        "Toplam Üretim (Boy)",
-        "İlk Görülen Sipariş Tarihi",
-        "Son Görülen Sipariş Tarihi",
-        "Sipariş Başına Ortalama Üretim",
-        "Yıllık Ortalama Tüketim",
-        "Önerilen Stok / Parti Boyu"
-    ]
-
+    profile = profile.rename(columns={
+        "profil": UI_COLS["profil"],
+        "toplam_siparis_kalemi": UI_COLS["toplam_kayit"],
+        "farkli_siparis_sayisi": UI_COLS["farkli_siparis"],
+        "toplam_uretilen_boy": UI_COLS["toplam_uretim"],
+        "ilk_tarih": UI_COLS["ilk_tarih"],
+        "son_tarih": UI_COLS["son_tarih"],
+        "siparis_basina_ortalama_boy": UI_COLS["siparis_ort"],
+    })
+    
     return profile.sort_values(
-        ["Toplam Kayıt Sayısı", "Toplam Üretim (Boy)"],
+        [UI_COLS["toplam_kayit"], UI_COLS["toplam_uretim"]],
         ascending=[False, False]
     )
-
 
 def build_high_volume_profile_summary(scope_df: pd.DataFrame, min_boy: int, hedef_uretim: int) -> pd.DataFrame:
     filtered = scope_df[scope_df["adet"] >= min_boy].copy()
 
     if filtered.empty:
         return pd.DataFrame(columns=[
-            "Profil Kodu",
-            "Toplam Kayıt Sayısı",
-            "Farklı Sipariş Sayısı",
-            "Toplam Üretilen Boy",
-            "İlk Sipariş Tarihi",
-            "Son Sipariş Tarihi",
-            "Sipariş Başına Ortalama Boy",
-            "Yıllık Tüketim",
-            "Yeni Akıllı Öneri (Boy)"
+            UI_COLS["profil"],
+            UI_COLS["toplam_kayit"],
+            UI_COLS["farkli_siparis"],
+            UI_COLS["toplam_uretim"],
+            UI_COLS["ilk_tarih"],
+            UI_COLS["son_tarih"],
+            UI_COLS["siparis_ort"],
+            UI_COLS["yillik_tuketim"],
+            UI_COLS["onerilen_parti"],
         ])
 
     profile = filtered.groupby("profil", as_index=False).agg(
@@ -469,31 +483,28 @@ def build_high_volume_profile_summary(scope_df: pd.DataFrame, min_boy: int, hede
 
     yil_sayisi = max(filtered["yil"].nunique(), 1)
 
-    profile["Yıllık Tüketim"] = (
+    profile[UI_COLS["yillik_tuketim"]] = (
         profile["toplam_uretilen_boy"] / yil_sayisi
     ).round(0)
-
-    profile["Yeni Akıllı Öneri (Boy)"] = (
-        profile["Yıllık Tüketim"] / hedef_uretim
+    
+    profile[UI_COLS["onerilen_parti"]] = (
+        profile[UI_COLS["yillik_tuketim"]] / hedef_uretim
     ).round(0)
-
-    profile.columns = [
-        "Profil Kodu",
-        "Toplam Kayıt Sayısı",
-        "Farklı Sipariş Sayısı",
-        "Toplam Üretim (Boy)",
-        "İlk Görülen Sipariş Tarihi",
-        "Son Görülen Sipariş Tarihi",
-        "Sipariş Başına Ortalama Üretim",
-        "Yıllık Ortalama Tüketim",
-        "Önerilen Stok / Parti Boyu"
-    ]
-
+    
+    profile = profile.rename(columns={
+        "profil": UI_COLS["profil"],
+        "toplam_siparis_kalemi": UI_COLS["toplam_kayit"],
+        "farkli_siparis_sayisi": UI_COLS["farkli_siparis"],
+        "toplam_uretilen_boy": UI_COLS["toplam_uretim"],
+        "ilk_tarih": UI_COLS["ilk_tarih"],
+        "son_tarih": UI_COLS["son_tarih"],
+        "siparis_basina_ortalama_boy": UI_COLS["siparis_ort"],
+    })
+    
     return profile.sort_values(
-        ["Toplam Üretim (Boy)", "Toplam Kayıt Sayısı"],
+        [UI_COLS["toplam_uretim"], UI_COLS["toplam_kayit"]],
         ascending=[False, False]
     )
-
 
 def build_high_volume_year_summary(scope_df: pd.DataFrame, min_boy: int) -> pd.DataFrame:
     filtered = scope_df[scope_df["adet"] >= min_boy].copy()
@@ -641,7 +652,12 @@ def moving_average_chart(monthly_df: pd.DataFrame):
     
 def build_dashboard_top_profiles(scope_df: pd.DataFrame, top_n: int = 15) -> pd.DataFrame:
     if scope_df.empty:
-        return pd.DataFrame(columns=["Profil Kodu", "Toplam Üretilen Boy", "Toplam Kg", "Sipariş Sayısı"])
+        return pd.DataFrame(columns=[
+            UI_COLS["profil"],
+            UI_COLS["toplam_uretim"],
+            UI_COLS["toplam_kg"],
+            UI_COLS["siparis_sayisi"],
+        ])
 
     prof = scope_df.groupby("profil", as_index=False).agg(
         toplam_adet=("adet", "sum"),
@@ -656,7 +672,12 @@ def build_dashboard_top_profiles(scope_df: pd.DataFrame, top_n: int = 15) -> pd.
         ascending=[False, False]
     ).head(top_n)
 
-    prof.columns = ["Profil Kodu", "Toplam Üretilen Boy", "Toplam Kg", "Sipariş Sayısı"]
+    prof.columns = [
+        UI_COLS["profil"],
+        UI_COLS["toplam_uretim"],
+        UI_COLS["toplam_kg"],
+        UI_COLS["siparis_sayisi"],
+    ]
     return prof
 
 
@@ -776,15 +797,20 @@ def build_abc_analysis(scope_df: pd.DataFrame, hedef_uretim: int) -> pd.DataFram
 
     profile = profile.sort_values("toplam_uretilen_boy", ascending=False).reset_index(drop=True)
 
-    profile["Yıllık Tüketim"] = (profile["toplam_uretilen_boy"] / yil_sayisi).round(0)
-    profile["Yeni Akıllı Öneri (Boy)"] = (profile["Yıllık Tüketim"] / hedef_uretim).round(0)
-
+    profile[UI_COLS["yillik_tuketim"]] = (
+        profile["toplam_uretilen_boy"] / yil_sayisi
+    ).round(0)
+    
+    profile[UI_COLS["onerilen_parti"]] = (
+        profile[UI_COLS["yillik_tuketim"]] / hedef_uretim
+    ).round(0)
+    
     if toplam_genel > 0:
         profile["pay"] = profile["toplam_uretilen_boy"] / toplam_genel * 100
-        profile["Kümülatif Pay (%)"] = profile["pay"].cumsum().round(2)
+        profile[UI_COLS["kumulatif_pay"]] = profile["pay"].cumsum().round(2)
     else:
         profile["pay"] = 0
-        profile["Kümülatif Pay (%)"] = 0
+        profile[UI_COLS["kumulatif_pay"]] = 0
 
     def abc_label(kum_pay):
         if kum_pay <= 80:
@@ -793,41 +819,36 @@ def build_abc_analysis(scope_df: pd.DataFrame, hedef_uretim: int) -> pd.DataFram
             return "B"
         return "C"
 
-    profile["ABC Sınıfı"] = profile["Kümülatif Pay (%)"].apply(abc_label)
-
+    profile[UI_COLS["abc_sinifi"]] = profile[UI_COLS["kumulatif_pay"]].apply(abc_label)
+    
     def stok_onerisi(row):
-        if row["ABC Sınıfı"] == "A":
+        if row[UI_COLS["abc_sinifi"]] == "A":
             return "Evet"
-        elif row["ABC Sınıfı"] == "B":
+        elif row[UI_COLS["abc_sinifi"]] == "B":
             return "Planlı Üret"
         return "Hayır"
-
-    profile["Stok Önerisi"] = profile.apply(stok_onerisi, axis=1)
+    
+    profile[UI_COLS["stok_karari"]] = profile.apply(stok_onerisi, axis=1)
 
     profile = profile[[
         "profil",
         "toplam_uretilen_boy",
         "toplam_siparis_kalemi",
         "farkli_siparis_sayisi",
-        "Yıllık Tüketim",
-        "Yeni Akıllı Öneri (Boy)",
-        "Kümülatif Pay (%)",
-        "ABC Sınıfı",
-        "Stok Önerisi"
+        UI_COLS["yillik_tuketim"],
+        UI_COLS["onerilen_parti"],
+        UI_COLS["kumulatif_pay"],
+        UI_COLS["abc_sinifi"],
+        UI_COLS["stok_karari"],
     ]]
-
-    profile.columns = [
-        "Profil Kodu",
-        "Toplam Üretim (Boy)",
-        "Toplam Kayıt Sayısı",
-        "Farklı Sipariş Sayısı",
-        "Yıllık Ortalama Tüketim",
-        "Önerilen Stok / Parti Boyu",
-        "Toplam İçindeki Kümülatif Pay (%)",
-        "ABC Sınıfı",
-        "Stok Kararı"
-    ]
-
+    
+    profile = profile.rename(columns={
+        "profil": UI_COLS["profil"],
+        "toplam_uretilen_boy": UI_COLS["toplam_uretim"],
+        "toplam_siparis_kalemi": UI_COLS["toplam_kayit"],
+        "farkli_siparis_sayisi": UI_COLS["farkli_siparis"],
+    })
+    
     return profile
 
 def build_profit_simulation(scope_df: pd.DataFrame) -> pd.DataFrame:
@@ -928,7 +949,7 @@ def build_customer_detail(scope_df: pd.DataFrame, musteri_adi: str, secilen_boy:
         ["Toplam Kayıt Sayısı", toplam_satir],
         ["Farklı Sipariş Sayısı", farkli_siparis],
         ["Farklı Profil Sayısı", farkli_profil],
-        ["Toplam Üretilen Boy", toplam_adet],
+        ["Toplam Üretim (Boy)", toplam_adet],
         ["Toplam Kg", round(toplam_kg, 2)],
         [f"{secilen_boy} Boy ve Altı Sipariş Kalemi", kucuk_satir],
         [f"{secilen_boy} Boy Üstü Sipariş Kalemi", buyuk_satir],
@@ -954,7 +975,7 @@ def build_customer_detail(scope_df: pd.DataFrame, musteri_adi: str, secilen_boy:
     {", ".join(grup_listesi[:50])}
     
     ### Özet
-    - Toplam sipariş kalemi: **{toplam_satir}**
+    - Toplam Kayıt Sayısı: **{toplam_satir}**
     - Farklı sipariş: **{farkli_siparis}**
     - Farklı profil: **{farkli_profil}**
     - Toplam üretim: **{toplam_adet} boy**
@@ -1098,7 +1119,7 @@ def build_scenario_table(scope_df: pd.DataFrame, secilen_boy: int, hedef_kucuk_o
 
     rows = [
         {"Senaryo": "Toplam Sipariş Satırı", "Değer": f"{toplam_satir:,}"},
-        {"Senaryo": "Toplam Üretilen Boy", "Değer": f"{toplam_adet:,}"},
+        {"Senaryo": "Toplam Üretim (Boy)", "Değer": f"{toplam_adet:,}"},
         {"Senaryo": f"Mevcut Küçük Sipariş Oranı (≤{secilen_boy})", "Değer": f"%{mevcut_kucuk_oran:.2f}"},
         {"Senaryo": "Mevcut Küçük Sipariş Satırı", "Değer": f"{kucuk_satir:,}"},
         {"Senaryo": "Mevcut Küçük Sipariş Üretimi", "Değer": f"{kucuk_adet:,}"},
@@ -1164,15 +1185,21 @@ def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
     if abc_df.empty:
         return "### Sonuç\nABC analizi için kayıt bulunamadı."
 
-    a_sayisi = int((abc_df["ABC Sınıfı"] == "A").sum())
-    b_sayisi = int((abc_df["ABC Sınıfı"] == "B").sum())
-    c_sayisi = int((abc_df["ABC Sınıfı"] == "C").sum())
+    a_sayisi = int((abc_df[UI_COLS["abc_sinifi"]] == "A").sum())
+    b_sayisi = int((abc_df[UI_COLS["abc_sinifi"]] == "B").sum())
+    c_sayisi = int((abc_df[UI_COLS["abc_sinifi"]] == "C").sum())
 
-    a_toplam = int(abc_df[abc_df["ABC Sınıfı"] == "A"]["Toplam Üretilen Boy"].sum())
-    b_toplam = int(abc_df[abc_df["ABC Sınıfı"] == "B"]["Toplam Üretilen Boy"].sum())
-    c_toplam = int(abc_df[abc_df["ABC Sınıfı"] == "C"]["Toplam Üretilen Boy"].sum())
-
-    stok_adet = int((abc_df["Stok Önerisi"] == "Evet").sum())
+    a_toplam = int(
+        abc_df[abc_df[UI_COLS["abc_sinifi"]] == "A"][UI_COLS["toplam_uretim"]].sum()
+    )
+    b_toplam = int(
+        abc_df[abc_df[UI_COLS["abc_sinifi"]] == "B"][UI_COLS["toplam_uretim"]].sum()
+    )
+    c_toplam = int(
+        abc_df[abc_df[UI_COLS["abc_sinifi"]] == "C"][UI_COLS["toplam_uretim"]].sum()
+    )
+    
+    stok_adet = int((abc_df[UI_COLS["stok_karari"]] == "Evet").sum())
 
     lines = [
         "## 📦 ABC Analizi ve Stok Önerisi",
@@ -1262,7 +1289,7 @@ def build_executive_summary(scope_df, abc_df, secilen_boy, hedef_kucuk_oran):
     )
 
     # A SINIFI
-    a_class = abc_df[abc_df["ABC Sınıfı"] == "A"].head(10)
+    a_class = abc_df[abc_df[UI_COLS["abc_sinifi"]] == "A"].head(10)
     # SİMÜLASYON
     mevcut_oran = kucuk_satir_yuzde
     hedef_oran = hedef_kucuk_oran
@@ -1346,7 +1373,7 @@ def build_executive_summary(scope_df, abc_df, secilen_boy, hedef_kucuk_oran):
     
     for _, row in a_class.iterrows():
         lines.append(
-            f"- {row['Profil Kodu']} → aylık: {int(row['Yıllık Tüketim']/12):,} / yıllık: {int(row['Yıllık Tüketim']):,}"
+            f"- {row[UI_COLS['profil']]} → aylık: {int(row[UI_COLS['yillik_tuketim']]/12):,} / yıllık: {int(row[UI_COLS['yillik_tuketim']]):,}"
         )
 
     forecast_df = build_forecast_table(scope_df)
@@ -1392,17 +1419,22 @@ def abc_chart(abc_df: pd.DataFrame, top_n_value: int):
     if abc_df.empty:
         return None
 
-    top_n = abc_df.head(top_n_value).sort_values("Toplam Üretilen Boy")
+    top_n = abc_df.head(top_n_value).sort_values(UI_COLS["toplam_uretim"])
 
     fig = px.bar(
         top_n,
-        x="Toplam Üretilen Boy",
-        y="Profil Kodu",
+        x=UI_COLS["toplam_uretim"],
+        y=UI_COLS["profil"],
         orientation="h",
-        color="ABC Sınıfı",
+        color=UI_COLS["abc_sinifi"],
         title=f"ABC Analizi - En Yüksek Tüketimli Profiller (ilk {top_n_value})",
-        text="Toplam Üretilen Boy",
-        hover_data=["Toplam Kayıt Sayısı", "Yıllık Tüketim", "Stok Önerisi", "Kümülatif Pay (%)"]
+        text=UI_COLS["toplam_uretim"],
+        hover_data=[
+            UI_COLS["toplam_kayit"],
+            UI_COLS["yillik_tuketim"],
+            UI_COLS["stok_karari"],
+            UI_COLS["kumulatif_pay"],
+        ]
     )
     fig.update_layout(height=max(500, top_n_value * 35), yaxis={"automargin": True})
     return fig
@@ -1442,12 +1474,15 @@ def top_profiles_chart(profile_summary: pd.DataFrame, top_n_value: int):
 
     fig = px.bar(
         top_n,
-        x="Toplam Kayıt Sayısı",
-        y="Profil Kodu",
+        x=UI_COLS["toplam_kayit"],
+        y=UI_COLS["profil"],
         orientation="h",
         title=f"En sık geçen profiller (ilk {top_n_value})",
-        text="Toplam Kayıt Sayısı",
-        hover_data=["Farklı Sipariş Sayısı", "Toplam Üretim (Boy)"],
+        text=UI_COLS["toplam_kayit"],
+        hover_data=[
+            UI_COLS["farkli_siparis"],
+            UI_COLS["toplam_uretim"]
+        ],
     )
 
     fig.update_layout(
@@ -1460,18 +1495,22 @@ def high_volume_chart(profile_summary: pd.DataFrame, top_n_value: int):
     if profile_summary.empty:
         return None
 
-    top_n = profile_summary.head(top_n_value).sort_values("Toplam Üretilen Boy")
+    top_n = profile_summary.head(top_n_value).sort_values(UI_COLS["toplam_uretim"])
 
     grafik_yuksekligi = max(500, top_n_value * 35)
 
     fig = px.bar(
         top_n,
-        x="Toplam Üretilen Boy",
-        y="Profil Kodu",
+        x=UI_COLS["toplam_uretim"],
+        y=UI_COLS["profil"],
         orientation="h",
         title=f"En çok üretime giren profiller (ilk {top_n_value})",
-        text="Toplam Üretilen Boy",
-        hover_data=["Toplam Kayıt Sayısı", "Farklı Sipariş Sayısı", "Yıllık Ortalama Tüketim"],
+        text=UI_COLS["toplam_uretim"],
+        hover_data=[
+            UI_COLS["toplam_kayit"],
+            UI_COLS["farkli_siparis"],
+            UI_COLS["yillik_tuketim"],
+        ]
     )
 
     fig.update_layout(
@@ -1659,12 +1698,12 @@ def dashboard_top_profiles_chart(top_profiles_df: pd.DataFrame):
         return None
 
     fig = px.bar(
-        top_profiles_df.sort_values("Toplam Üretilen Boy"),
-        x="Toplam Üretilen Boy",
+        top_profiles_df.sort_values(UI_COLS["toplam_uretim"]),
+        x=UI_COLS["toplam_uretim"],
         y="Profil Kodu",
         orientation="h",
         title="En Çok Üretilen Profil",
-        text="Toplam Üretilen Boy",
+        text=UI_COLS["toplam_uretim"],
         hover_data=["Toplam Kg", "Sipariş Sayısı"],
     )
     fig.update_layout(height=420, yaxis={"automargin": True})
@@ -1893,7 +1932,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
 
-    profile_list = profile_df["Profil Kodu"].tolist() if not profile_df.empty else []
+    profile_list = profile_df[UI_COLS["profil"]].tolist() if not profile_df.empty else []
     
     customer_mapping = load_customer_mapping()
     musteri_list = sorted(customer_mapping.keys())
