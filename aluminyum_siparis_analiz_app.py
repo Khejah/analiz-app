@@ -1046,8 +1046,8 @@ def build_scenario_table(scope_df: pd.DataFrame, secilen_boy: int, hedef_kucuk_o
     agresif_oran = max(1, min(hedef_oran - 3, hedef_oran))
 
     kalip_degisim_sayisi = kucuk.groupby("siparis_no")["profil"].nunique().sum()
-    mevcut_kalip_suresi = float(kalip_degisim_sayisi)  # 1 sipariş/profil geçişi = 1 saat varsayımı
-
+    mevcut_kalip_suresi = float(kalip_degisim_sayisi) * (5 / 60)
+    
     def scenario_calc(target_ratio):
         oran_iyilesme = max(mevcut_kucuk_oran - target_ratio, 0)
         saat_kazanci = round((oran_iyilesme / 100) * mevcut_kalip_suresi, 2)
@@ -1183,7 +1183,7 @@ def build_executive_summary(scope_df, abc_df, secilen_boy, hedef_kucuk_oran):
     kalip_degisim_sayisi = kucuk.groupby("siparis_no")["profil"].nunique().sum()
     
     # ortalama 1 saat
-    toplam_kalip_suresi_saat = kalip_degisim_sayisi * 1
+    toplam_kalip_suresi_saat = kalip_degisim_sayisi * (5 / 60)
     toplam_kalip_suresi_gun = toplam_kalip_suresi_saat / 24
     # AKILLI YORUM MOTORU
     
@@ -1283,7 +1283,7 @@ def build_executive_summary(scope_df, abc_df, secilen_boy, hedef_kucuk_oran):
     "- Kritik eşik: %20 üzeri sipariş yoğunluğu",
     
     "",
-    "📎 Not: Kalıp değişim süresi ortalama **1 saat** olarak varsayılmıştır.",
+    "📎 Not: Kalıp değişim süresi ortalama **5 dakika** olarak varsayılmıştır.",
     "",
     "## 🔮 Simülasyon (What-if Analizi)",
 
