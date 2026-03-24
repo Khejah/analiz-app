@@ -287,7 +287,26 @@ def filter_scope_data(df: pd.DataFrame, yillar: Iterable[int], profil_ara: str =
 
     return filtered
 
+def filter_never_exceed_profiles(scope_df: pd.DataFrame, secilen_boy: int, profil_ara: str = "") -> pd.DataFrame:
+    """
+    Sadece seçilen boy eşiğini HİÇ aşmamış profilleri getirir.
+    Örnek: secilen_boy=10 ise, geçmişte 10 üstüne çıkmış hiçbir profil gelmez.
+    """
+    if scope_df.empty:
+        return scope_df.copy()
 
+    filtered = scope_df.copy()
+
+    profil_ara = (profil_ara or "").strip().upper()
+    if profil_ara:
+        filtered = filtered[filtered["profil"].str.upper().str.contains(profil_ara, na=False)]
+
+    max_adet_by_profile = filtered.groupby("profil")["adet"].max()
+    uygun_profiller = max_adet_by_profile[max_adet_by_profile <= secilen_boy].index
+
+    result = filtered[filtered["profil"].isin(uygun_profiller)].copy()
+    return result
+    
 def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFrame:
     if filtered.empty:
         return pd.DataFrame(columns=[
@@ -1731,7 +1750,63 @@ def summary_markdown(
 
     return "\n".join(lines)
 
+def never_exceed_summary_markdown(
+    never_df: pd.DataFrame,
+    scope_df: pd.DataFrame,
+    secilen_boy: int
+) -> str:
+    if never_df.empty:
+        return (
+            f"### Sonuç\n"
+            f"Seçilen filtrelere göre **{secilen_boy} boy üstüne hiç çıkmamış profil** bulunamadı."
+        )
 
+    yil_min = int(never_df["yil"].min())
+    yil_max = int(never_df["yil"].max())
+
+    toplam_satir = len(never_df)
+    toplam_adet = int(never_df["adet"].sum())
+    toplam_kg = float(never_df["kg"].fillna(0).sum())
+    benzersiz_profil = int(never_df["profil"].nunique())
+    benzersiz_siparis = int(never_df["siparis_no"].nunique())
+
+    genel_satir = len(scope_df)
+    genel_adet = int(scope_df["adet"].sum())
+
+    satir_oran = (toplam_satir / genel_satir * 100) if genel_satir else 0
+    adet_oran = (toplam_adet / genel_adet * 100) if genel_adet else 0
+
+    max_boy = int(never_df["adet"].max()) if not never_df.empty else 0
+    ort_boy = round(float(never_df["adet"].mean()), 2) if not never_df.empty else 0
+
+    lines = [
+        f"## 🚫 {secilen_boy} Boy Üstüne Hiç Çıkmamış Profiller",
+        "",
+        "### Tanım",
+        f"- Bu sekmede sadece geçmişte **asla {secilen_boy} boy üstüne çıkmamış** profiller yer alır.",
+        f"- Yani listelenen her profil için maksimum sipariş boyu **≤ {secilen_boy}** şartını sağlar.",
+        "",
+        "### Özet",
+        f"- Tarih aralığı: **{yil_min} - {yil_max}**",
+        f"- Benzersiz profil sayısı: **{benzersiz_profil:,}**",
+        f"- Benzersiz sipariş sayısı: **{benzersiz_siparis:,}**",
+        f"- Toplam sipariş satırı: **{toplam_satir:,}**",
+        f"- Toplam üretilen boy: **{toplam_adet:,}**",
+        f"- Toplam kg: **{toplam_kg:,.2f}**",
+        f"- Bu gruptaki maksimum boy: **{max_boy}**",
+        f"- Ortalama sipariş boyu: **{ort_boy}**",
+        "",
+        "### Genel İçindeki Payı",
+        f"- Toplam satır içindeki payı: **%{satir_oran:.1f}**",
+        f"- Toplam üretim içindeki payı: **%{adet_oran:.1f}**",
+        "",
+        "### Yönetim Yorumu",
+        f"- Bunlar gerçekten **{secilen_boy} boy üstüne hiç çıkmamış** profillerdir.",
+        "- Bu yüzden aksiyon kararı için klasik küçük sipariş listesinden daha temiz bir segment sunar.",
+    ]
+
+    return "\n".join(lines)
+    
 def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran):
     try:
         df = load_excel(excel_file)
@@ -1740,7 +1815,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
 
     scope_df = filter_scope_data(df, selected_years, profil_ara)
-    
+    never_exceed_df = filter_never_exceed_profiles(scope_df, int(secilen_boy), profil_ara="")
     filtered = filter_data(scope_df, int(secilen_boy), mod, "")
 
     hedef_uretim = int(hedef_uretim)
@@ -1751,6 +1826,20 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     profile_df = build_profile_summary(filtered, hedef_uretim)
     year_df = build_year_summary(filtered)
     monthly_load_df = build_small_order_monthly(scope_df, int(secilen_boy))
+    never_summary_text = never_exceed_summary_markdown(never_exceed_df, scope_df, int(secilen_boy))
+    never_boy_df = build_boy_breakdown(never_exceed_df, int(secilen_boy))
+    never_profile_df = build_profile_summary(never_exceed_df, hedef_uretim)
+    never_year_df = build_year_summary(never_exceed_df)
+    
+    never_raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
+    never_raw_df = never_exceed_df[never_raw_cols].sort_values("tarih", ascending=False).copy() if not never_exceed_df.empty else pd.DataFrame(columns=never_raw_cols)
+    
+    if not never_raw_df.empty:
+        never_raw_df["tarih"] = never_raw_df["tarih"].dt.strftime("%Y-%m-%d")
+
+    never_chart_boy = boy_breakdown_chart(never_boy_df)
+    never_chart_profile = top_profiles_chart(never_profile_df, top_n_value)
+    never_chart_monthly = monthly_chart(never_exceed_df)
 
     high_md = high_volume_summary_markdown(scope_df, int(secilen_boy))
     high_profile_df = build_high_volume_profile_summary(scope_df, int(secilen_boy), hedef_uretim)
@@ -1798,6 +1887,14 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         top_profiles_chart(profile_df, top_n_value),
         monthly_chart(filtered),
         small_order_load_chart(monthly_load_df, int(secilen_boy)),
+        never_summary_text,
+        never_boy_df,
+        never_year_df,
+        never_profile_df,
+        never_raw_df.head(500),
+        never_chart_boy,
+        never_chart_profile,
+        never_chart_monthly,
         high_md,
         high_year_df,
         high_profile_df,
@@ -1929,6 +2026,28 @@ with gr.Blocks(
 
                         with gr.Tab("Ham Kayıt Önizleme"):
                             raw_table = gr.Dataframe(interactive=False, wrap=True)
+
+                with gr.Tab("🚫 Eşiği Hiç Aşmamış Profiller"):
+                    never_summary_md = gr.Markdown()
+                
+                    with gr.Row():
+                        never_chart1 = gr.Plot(label="Boy dağılımı")
+                        never_chart2 = gr.Plot(label="Top profiller")
+                
+                    never_chart3 = gr.Plot(label="Aylık trend")
+                
+                    with gr.Tabs():
+                        with gr.Tab("Boy Kırılımı"):
+                            never_boy_table = gr.Dataframe(interactive=False, wrap=True)
+                
+                        with gr.Tab("Yıl Özeti"):
+                            never_year_table = gr.Dataframe(interactive=False, wrap=True)
+                
+                        with gr.Tab("Profil Özeti"):
+                            never_profile_table = gr.Dataframe(interactive=False, wrap=True)
+                
+                        with gr.Tab("Ham Kayıt Önizleme"):
+                            never_raw_table = gr.Dataframe(interactive=False, wrap=True)
 
                 with gr.Tab("📈 En Çok Üretime Giren Ürünlerin Listesi"):
                     high_summary = gr.Markdown()
@@ -2070,6 +2189,14 @@ with gr.Blocks(
             chart2,
             chart3,
             chart4,
+            never_summary_md,
+            never_boy_table,
+            never_year_table,
+            never_profile_table,
+            never_raw_table,
+            never_chart1,
+            never_chart2,
+            never_chart3,
             high_summary,
             high_year_table,
             high_profile_table,
