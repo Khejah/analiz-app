@@ -1835,7 +1835,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
 def load_profile_detail(profil, excel_file, secilen_boy, mod, yillar):
     df = load_excel(excel_file)
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
-    filtered = filter_data(df, int(secilen_boy), mod, selected_years, "")
+    filtered = filter_data(df, int(secilen_boy), mod, "")
 
     yearly, boy_dist, toplam, siparis = build_profile_detail(filtered, profil, selected_years)
 
