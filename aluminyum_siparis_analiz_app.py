@@ -310,7 +310,7 @@ def filter_never_exceed_profiles(scope_df: pd.DataFrame, secilen_boy: int, profi
 def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFrame:
     if filtered.empty:
         return pd.DataFrame(columns=[
-            "Boy", "Toplam Sipariş Kalemi", "Farklı Sipariş Sayısı",
+            "Boy", "Toplam Kayıt Sayısı", "Farklı Sipariş Sayısı",
             "Farklı Profil Sayısı", "Toplam Üretilen Boy", "Toplam Kg"
         ])
 
@@ -330,7 +330,7 @@ def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFram
         if row is None:
             rows.append({
                 "Boy": boy,
-                "Toplam Sipariş Kalemi": 0,
+                "Toplam Kayıt Sayısı": 0,
                 "Farklı Sipariş Sayısı": 0,
                 "Farklı Profil Sayısı": 0,
                 "Toplam Üretilen Boy": 0,
@@ -339,7 +339,7 @@ def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFram
         else:
             rows.append({
                 "Boy": boy,
-                "Toplam Sipariş Kalemi": int(row["toplam_satir"]),
+                "Toplam Kayıt Sayısı": int(row["toplam_satir"]),
                 "Farklı Sipariş Sayısı": int(row["farkli_siparis"]),
                 "Farklı Profil Sayısı": int(row["farkli_profil"]),
                 "Toplam Üretilen Boy": int(row["toplam_boy"]),
@@ -349,7 +349,7 @@ def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFram
     result = pd.DataFrame(rows)
     result = result.rename(columns={
         "Boy": "Sipariş Boyu",
-        "Toplam Sipariş Kalemi": "Bu Boydaki Kayıt Sayısı",
+        "Toplam Kayıt Sayısı": "Toplam Kayıt Sayısı",
         "Farklı Sipariş Sayısı": "Bu Boydaki Farklı Sipariş Sayısı",
         "Farklı Profil Sayısı": "Bu Boydaki Farklı Profil Sayısı",
         "Toplam Üretilen Boy": "Bu Boydaki Toplam Üretim",
@@ -383,7 +383,7 @@ def build_profile_summary(filtered: pd.DataFrame, hedef_uretim: int) -> pd.DataF
     if filtered.empty:
         return pd.DataFrame(columns=[
             "Profil Kodu",
-            "Toplam Sipariş Kalemi",
+            "Toplam Kayıt Sayısı",
             "Farklı Sipariş Sayısı",
             "Toplam Üretilen Boy",
             "İlk Sipariş Tarihi",
@@ -442,7 +442,7 @@ def build_high_volume_profile_summary(scope_df: pd.DataFrame, min_boy: int, hede
     if filtered.empty:
         return pd.DataFrame(columns=[
             "Profil Kodu",
-            "Toplam Sipariş Kalemi",
+            "Toplam Kayıt Sayısı",
             "Farklı Sipariş Sayısı",
             "Toplam Üretilen Boy",
             "İlk Sipariş Tarihi",
@@ -756,7 +756,7 @@ def build_abc_analysis(scope_df: pd.DataFrame, hedef_uretim: int) -> pd.DataFram
         return pd.DataFrame(columns=[
             "Profil Kodu",
             "Toplam Üretilen Boy",
-            "Toplam Sipariş Kalemi",
+            "Toplam Kayıt Sayısı",
             "Farklı Sipariş Sayısı",
             "Yıllık Tüketim",
             "Yeni Akıllı Öneri (Boy)",
@@ -925,7 +925,7 @@ def build_customer_detail(scope_df: pd.DataFrame, musteri_adi: str, secilen_boy:
     summary_df = pd.DataFrame([
         ["İncelenen Müşteri Grubu", musteri_adi],
         ["Bu gruba bağlı alt müşteri/kod sayısı", len(grup_listesi)],
-        ["Toplam Sipariş Kalemi", toplam_satir],
+        ["Toplam Kayıt Sayısı", toplam_satir],
         ["Farklı Sipariş Sayısı", farkli_siparis],
         ["Farklı Profil Sayısı", farkli_profil],
         ["Toplam Üretilen Boy", toplam_adet],
@@ -1402,7 +1402,7 @@ def abc_chart(abc_df: pd.DataFrame, top_n_value: int):
         color="ABC Sınıfı",
         title=f"ABC Analizi - En Yüksek Tüketimli Profiller (ilk {top_n_value})",
         text="Toplam Üretilen Boy",
-        hover_data=["Toplam Sipariş Kalemi", "Yıllık Tüketim", "Stok Önerisi", "Kümülatif Pay (%)"]
+        hover_data=["Toplam Kayıt Sayısı", "Yıllık Tüketim", "Stok Önerisi", "Kümülatif Pay (%)"]
     )
     fig.update_layout(height=max(500, top_n_value * 35), yaxis={"automargin": True})
     return fig
@@ -1437,12 +1437,12 @@ def top_profiles_chart(profile_summary: pd.DataFrame, top_n_value: int):
     if profile_summary.empty:
         return None
 
-    top_n = profile_summary.head(top_n_value).sort_values("Toplam Sipariş Kalemi")
+    top_n = profile_summary.head(top_n_value).sort_values("Toplam Kayıt Sayısı")
     grafik_yuksekligi = max(500, top_n_value * 35)
 
     fig = px.bar(
         top_n,
-        x="Toplam Sipariş Sayısı",
+        x="Toplam Kayıt Sayısı",
         y="Profil Kodu",
         orientation="h",
         title=f"En sık geçen profiller (ilk {top_n_value})",
@@ -1471,7 +1471,7 @@ def high_volume_chart(profile_summary: pd.DataFrame, top_n_value: int):
         orientation="h",
         title=f"En çok üretime giren profiller (ilk {top_n_value})",
         text="Toplam Üretilen Boy",
-        hover_data=["Toplam Sipariş Kalemi", "Farklı Sipariş Sayısı", "Yıllık Tüketim"],
+        hover_data=["Toplam Kayıt Sayısı", "Farklı Sipariş Sayısı", "Yıllık Tüketim"],
     )
 
     fig.update_layout(
@@ -1488,9 +1488,9 @@ def boy_breakdown_chart(boy_breakdown: pd.DataFrame):
     fig = px.bar(
         boy_breakdown.sort_values("Sipariş Boyu"),
         x="Sipariş Boyu",
-        y="Bu Boydaki Kayıt Sayısı",
+        y="Toplam Kayıt Sayısı",
         title="Boylara Göre Sipariş Dağılımı",
-        text="Bu Boydaki Kayıt Sayısı",
+        text="Toplam Kayıt Sayısı",
         hover_data=[
             "Bu Boydaki Farklı Sipariş Sayısı",
             "Bu Boydaki Farklı Profil Sayısı",
