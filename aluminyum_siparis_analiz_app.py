@@ -1446,8 +1446,8 @@ def top_profiles_chart(profile_summary: pd.DataFrame, top_n_value: int):
         y="Profil Kodu",
         orientation="h",
         title=f"En sık geçen profiller (ilk {top_n_value})",
-        text="Toplam Sipariş Sayısı",
-        hover_data=["Farklı Sipariş Sayısı", "Toplam Üretilen Boy"],
+        text="Toplam Kayıt Sayısı",
+        hover_data=["Farklı Sipariş Sayısı", "Toplam Üretim (Boy)"],
     )
 
     fig.update_layout(
@@ -1471,7 +1471,7 @@ def high_volume_chart(profile_summary: pd.DataFrame, top_n_value: int):
         orientation="h",
         title=f"En çok üretime giren profiller (ilk {top_n_value})",
         text="Toplam Üretilen Boy",
-        hover_data=["Toplam Kayıt Sayısı", "Farklı Sipariş Sayısı", "Yıllık Tüketim"],
+        hover_data=["Toplam Kayıt Sayısı", "Farklı Sipariş Sayısı", "Yıllık Ortalama Tüketim"],
     )
 
     fig.update_layout(
