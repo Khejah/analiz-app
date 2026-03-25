@@ -8,11 +8,6 @@ import hashlib
 import json
 import re
 import unicodedata
-import requests
-
-api_key = os.getenv("OPENAI_API_KEY")
-
-GLOBAL_AI_CONTEXT = None
 
 CACHE_DIR = "/tmp/cache_data"
 os.makedirs(CACHE_DIR, exist_ok=True)
@@ -2020,19 +2015,6 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         hedef_kucuk_oran
     )
 
-    # 🤖 AI CONTEXT (EKLENDİ)
-    ai_context = {
-        "toplam_kayit": int(len(scope_df)),
-        "toplam_uretim": int(scope_df["adet"].sum()),
-        "benzersiz_profil": int(scope_df["profil"].nunique()),
-        "benzersiz_musteri": int(scope_df["musteri_siparis_no"].nunique()),
-        "kucuk_siparis_orani": float((scope_df["adet"] <= int(secilen_boy)).mean()),
-        "yillar": list(map(int, sorted(scope_df["yil"].unique()))),
-    }
-    
-    global GLOBAL_AI_CONTEXT
-    GLOBAL_AI_CONTEXT = ai_context
-
     result = (
         summary_small_text,
         boy_df,
@@ -2101,40 +2083,6 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         pass
     
     return result
-
-def ai_chat(user_message):
-    global GLOBAL_AI_CONTEXT
-
-    if GLOBAL_AI_CONTEXT is None:
-        return "Önce analiz çalıştır."
-
-    prompt = f"""
-    Sen bir üretim veri analizi uzmanısın.
-
-    Elindeki veri:
-    {GLOBAL_AI_CONTEXT}
-
-    Kullanıcı sorusu:
-    {user_message}
-
-    Kısa, net ve iş odaklı cevap ver.
-    """
-
-    response = requests.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {api_key}",  # ✅ BURASI ENV'DEN GELİYOR
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "user", "content": prompt}
-            ]
-        }
-    )
-
-    return response.json()["choices"][0]["message"]["content"]
     
 def load_profile_detail(profil, excel_file, secilen_boy, mod, yillar):
     df = load_excel(excel_file)
@@ -2497,23 +2445,6 @@ with gr.Blocks(
         inputs=[musteri_sec, excel_file, secilen_boy, mod, years, profil_ara],
         outputs=[musteri_ozet, musteri_yorum]
     )
-
-gr.Markdown("## 🤖 AI Analiz Asistanı")
-
-chat_input = gr.Textbox(
-    label="Sorunu yaz",
-    placeholder="Örn: Küçük sipariş oranı neden yüksek?"
-)
-
-chat_output = gr.Textbox(label="Cevap")
-
-chat_btn = gr.Button("Sor")
-
-chat_btn.click(
-    fn=ai_chat,
-    inputs=chat_input,
-    outputs=chat_output
-)
 
 if __name__ == "__main__":
     import os
