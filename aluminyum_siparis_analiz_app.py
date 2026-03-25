@@ -1761,7 +1761,17 @@ def summary_markdown(
     kucuk_kalip = filtered["profil"].nunique()
     kalip_oran = (kucuk_kalip / toplam_kalip * 100) if toplam_kalip > 0 else 0
     toplam_sure_saat = (kucuk_kalip * 5) / 60
-    # KALIP DEĞİŞİM KODU ÜSTTEKİ 4 SATIR
+    # 🔍 KALIP KIRILIM ANALİZİ
+    tum_kaliplar = set(scope_df["profil"].unique())
+    kucuk_kaliplar = set(filtered["profil"].unique())
+    
+    buyuk_df = scope_df[scope_df["adet"] > secilen_boy]
+    buyuk_kaliplar = set(buyuk_df["profil"].unique())
+    
+    sadece_kucuk = len(kucuk_kaliplar - buyuk_kaliplar)
+    sadece_buyuk = len(buyuk_kaliplar - kucuk_kaliplar)
+    ortak = len(kucuk_kaliplar & buyuk_kaliplar)
+    # KALIP DEĞİŞİM KODU ÜSTTEKİ 11 SATIR
     buyuk_satir = toplam_scope_satir - kucuk_satir
     buyuk_adet = toplam_scope_adet - kucuk_adet
 
@@ -1805,6 +1815,12 @@ def summary_markdown(
         f"- Oranı: **%{kalip_oran:.1f}**",
         f"- Tahmini setup süresi: **{toplam_sure_saat:.1f} saat**",
         "",
+        "### 📊 Kalıp Kullanım Dağılımı",
+        f"- 🔴 Sadece küçük sipariş: **{sadece_kucuk:,}**",
+        f"- 🟢 Sadece büyük sipariş: **{sadece_buyuk:,}**",
+        f"- 🟡 Her iki sipariş türü: **{ortak:,}**",
+        "",
+        "### Genel Yorum Değerlendirme:",
         f"- Yorum: **{yorum}**",
     ]
 
