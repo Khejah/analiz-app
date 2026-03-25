@@ -161,6 +161,18 @@ def load_excel(excel_file) -> pd.DataFrame:
 
     file_hash = get_file_hash(excel_path)
     cache_path = os.path.join(CACHE_DIR, f"{file_hash}.pkl")
+    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
+
+    # 🚀 ULTRA FAST PARQUET CACHE
+    if os.path.exists(parquet_path):
+        try:
+            df_fast = pd.read_parquet(parquet_path)
+            required_cols = {"tarih", "profil", "siparis_no", "adet", "yil", "ay"}
+    
+            if required_cols.issubset(set(df_fast.columns)):
+                return df_fast
+        except Exception:
+            pass
 
     # CACHE VARSA → direkt yükle
     if os.path.exists(cache_path):
@@ -270,8 +282,16 @@ def load_excel(excel_file) -> pd.DataFrame:
     work["adet"] = work["adet"].astype(int)
     work["yil"] = work["tarih"].dt.year.astype(int)
     work["ay"] = work["tarih"].dt.to_period("M").astype(str)
+    
+    # ✅ mevcut cache (dokunma)
     try:
         work.to_pickle(cache_path)
+    except Exception:
+        pass
+    
+    # 🚀 YENİ EKLEDİĞİMİZ (SADECE BU)
+    try:
+        work.to_parquet(parquet_path, index=False)
     except Exception:
         pass
     
