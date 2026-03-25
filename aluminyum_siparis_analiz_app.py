@@ -1756,6 +1756,12 @@ def summary_markdown(
 
     kucuk_satir = len(filtered)
     kucuk_adet = int(filtered["adet"].sum())
+    # 🔩 KALIP ANALİZİ
+    toplam_kalip = scope_df["profil"].nunique()
+    kucuk_kalip = filtered["profil"].nunique()
+
+    kalip_oran = (kucuk_kalip / toplam_kalip * 100) if toplam_kalip else 0
+    toplam_sure_saat = kucuk_kalip * (5/60)
     buyuk_satir = toplam_scope_satir - kucuk_satir
     buyuk_adet = toplam_scope_adet - kucuk_adet
 
@@ -1792,6 +1798,12 @@ def summary_markdown(
         "### 🔩 Üretim Dağılımı",
         f"- Toplam kayıt içinde küçük siparişlerin payı: **%{satir_yuzde:.1f}**",
         f"- Toplam üretim içinde küçük siparişlerin payı: **%{adet_yuzde:.1f}**",
+        "",
+        "### 🔧 Kalıp Değişim Analizi",
+        f"- Toplam kalıp (profil) sayısı: **{toplam_kalip:,}**",
+        f"- Küçük sipariş kalıp sayısı: **{kucuk_kalip:,}**",
+        f"- Küçük siparişlerin kalıp içindeki payı: **%{kalip_oran:.1f}**",
+        f"- Tahmini setup süresi: **{toplam_sure_saat:.1f} saat**",
         f"- Yorum: **{yorum}**",
     ]
 
@@ -1825,6 +1837,11 @@ def never_exceed_summary_markdown(
     toplam_adet = int(never_df["adet"].sum())
     toplam_kg = float(never_df["kg"].fillna(0).sum())
     benzersiz_profil = int(never_df["profil"].nunique())
+    toplam_kalip = scope_df["profil"].nunique()
+    never_kalip = never_df["profil"].nunique()
+
+    kalip_oran = (never_kalip / toplam_kalip * 100) if toplam_kalip else 0
+    toplam_sure_saat = never_kalip * (5/60)
     benzersiz_siparis = int(never_df["siparis_no"].nunique())
 
     genel_satir = len(scope_df)
@@ -1846,6 +1863,12 @@ def never_exceed_summary_markdown(
         "### Özet",
         f"- Tarih aralığı: **{yil_min} - {yil_max}**",
         f"- Farklı profil sayısı: **{benzersiz_profil:,}**",
+        "",
+        "### 🔧 Kalıp Değişim Analizi",
+        f"- Toplam kalıp sayısı: **{toplam_kalip:,}**",
+        f"- Bu segmentteki kalıp sayısı: **{never_kalip:,}**",
+        f"- Toplam içindeki oranı: **%{kalip_oran:.1f}**",
+        f"- Tahmini setup süresi: **{toplam_sure_saat:.1f} saat**",
         f"- Farklı sipariş sayısı: **{benzersiz_siparis:,}**",
         f"- Toplam kayıt sayısı: **{toplam_satir:,}**",
         f"- Toplam üretim: **{toplam_adet:,}**",
