@@ -2124,17 +2124,11 @@ with gr.Blocks(
                     Amaç: operasyonel yükü azaltmak
                     """)
 
-                    with gr.Row():
-                        with gr.Column():
-                            chart1 = gr.Plot(label="📊 Sipariş Boy Dağılımı")
-                        with gr.Column():
-                            chart2 = gr.Plot(label="🏆 En Sık Sipariş Edilen Profiller")
-                    
-                    with gr.Row():
-                        with gr.Column():
-                            chart3 = gr.Plot(label="📈 Sipariş Yoğunluk Trendi")
-                        with gr.Column():
-                            chart4 = gr.Plot(label="⚠️ Küçük Siparişlerin Üretime Etkisi")
+                    with gr.Column():
+                        chart1 = gr.Plot(label="📊 Sipariş Boy Dağılımı")
+                        chart2 = gr.Plot(label="🏆 En Sık Sipariş Edilen Profiller")
+                        chart3 = gr.Plot(label="📈 Sipariş Yoğunluk Trendi")
+                        chart4 = gr.Plot(label="⚠️ Küçük Siparişlerin Üretime Etkisi")
                         
                     with gr.Tabs():
                         with gr.Tab("Boy Kırılımı"):
