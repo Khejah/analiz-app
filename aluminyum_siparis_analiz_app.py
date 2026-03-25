@@ -2081,7 +2081,7 @@ with gr.Blocks(
     # ✅ HEADER
     gr.HTML("""
     <div style="display:flex; align-items:center; gap:16px;">
-        <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:80px;">
+        <img src="https://raw.githubusercontent.com/Khejah/analiz-app/main/ic_asistal_a_fab.png" style="height:100px;">
         
         <div>
             <h1 style="margin:0;">
