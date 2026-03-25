@@ -1941,6 +1941,14 @@ def never_exceed_summary_markdown(
 def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran):
     try:
         df = load_excel(excel_file)
+        # 🚀 ANALİZ CACHE
+        analysis_cache_path = os.path.join(CACHE_DIR, f"analysis_{hash(str([secilen_boy, mod, yillar, profil_ara, hedef_uretim]))}.pkl")
+        
+        if os.path.exists(analysis_cache_path):
+            try:
+                return pd.read_pickle(analysis_cache_path)
+            except:
+                pass
     except Exception as e:
         raise gr.Error(f"Excel yüklenemedi: {str(e)}")
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
@@ -2007,6 +2015,57 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         hedef_kucuk_oran
     )
 
+    result = (
+        summary_small_text,
+        boy_df,
+        year_df,
+        profile_df,
+        raw.head(500),
+        monthly_load_df,
+        boy_breakdown_chart(boy_df),
+        top_profiles_chart(profile_df, top_n_value),
+        monthly_chart(filtered),
+        small_order_load_chart(monthly_load_df, int(secilen_boy)),
+        high_md,
+        high_year_df,
+        high_profile_df,
+        high_raw_df,
+        high_volume_chart(high_profile_df, top_n_value),
+        abc_md,
+        abc_df,
+        abc_chart(abc_df, top_n_value),
+        gr.update(choices=profile_list, value=profile_list[0] if profile_list else ""),
+        exec_summary,
+        dashboard_kpi_df,
+        dashboard_monthly_df,
+        dashboard_top_profiles_df,
+        dashboard_termin_df,
+        dashboard_monthly_chart(dashboard_monthly_df),
+        dashboard_pres_performance_chart(scope_df),
+        dashboard_top_profiles_chart(dashboard_top_profiles_df),
+        dashboard_termin_chart(dashboard_termin_df),
+        dashboard_pres_eff_df,
+        seasonality_df,
+        year_month_pivot_df,
+        seasonality_chart(seasonality_df),
+        moving_average_chart(dashboard_monthly_df),
+        profit_df,
+        root_musteri_df,
+        root_profil_df,
+        forecast_df,
+        forecast_chart(forecast_df),
+        scenario_md,
+        scenario_df
+    )
+    
+    # 🚀 cache’e yaz
+    try:
+        pd.to_pickle(result, analysis_cache_path)
+    except:
+        pass
+
+    return result
+    
     return (
         summary_small_text,
         boy_df,
