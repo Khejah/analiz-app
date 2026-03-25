@@ -1,5 +1,7 @@
 gradio
 pandas
 plotly
+requests
 openpyxl
 rapidfuzz
+pyarrow
