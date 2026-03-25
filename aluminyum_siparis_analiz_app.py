@@ -2015,7 +2015,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         hedef_kucuk_oran
     )
 
-   result = (
+    result = (
         summary_small_text,
         boy_df,
         year_df,
