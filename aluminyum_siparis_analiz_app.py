@@ -1181,7 +1181,7 @@ def scenario_summary_markdown(scope_df: pd.DataFrame, secilen_boy: int, hedef_ku
     ]
     return "\n".join(lines)
     
-def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
+def abc_summary_markdown(abc_df: pd.DataFrame, scope_df: pd.DataFrame) -> str:
     if abc_df.empty:
         return "### Sonuç\nABC analizi için kayıt bulunamadı."
 
@@ -1200,7 +1200,12 @@ def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
     )
     
     stok_adet = int((abc_df[UI_COLS["stok_karari"]] == "Evet").sum())
-
+    
+    # YENİ EKLENENLER
+    toplam_kalip = int(scope_df["profil"].nunique())
+    toplam_boy = int(scope_df["adet"].sum())
+    toplam_kg = float(scope_df["kg"].fillna(0).sum())
+    
     lines = [
         "## 📦 ABC Analizi ve Stok Önerisi",
         "",
@@ -1213,6 +1218,11 @@ def abc_summary_markdown(abc_df: pd.DataFrame) -> str:
         f"- C grubu toplam üretim: **{c_toplam:,} boy**",
         "",
         f"- Doğrudan stok önerilen profil sayısı: **{stok_adet}**",
+        "",
+        "### 📊 Genel Üretim Özeti",
+        f"- Toplam kullanılan kalıp (profil): **{toplam_kalip:,}**",
+        f"- Toplam çekilen profil boy: **{toplam_boy:,} boy**",
+        f"- Toplam üretilen kg: **{toplam_kg:,.2f} kg**",
         "",
         "### Yorum",
         "- **A grubu**: stok yapılmalı",
@@ -1948,7 +1958,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     high_raw_df = build_high_volume_raw(scope_df, int(secilen_boy))
 
     abc_df = build_abc_analysis(scope_df, hedef_uretim)
-    abc_md = abc_summary_markdown(abc_df)
+    abc_md = abc_summary_markdown(abc_df, scope_df)
     profit_df = build_profit_simulation(scope_df)
     root_musteri_df, root_profil_df, root_pres_df = build_root_cause(scope_df, int(secilen_boy))
     dashboard_kpi_df = build_dashboard_kpis(scope_df)
