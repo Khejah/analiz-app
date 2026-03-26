@@ -8,6 +8,16 @@ import hashlib
 import json
 import re
 import unicodedata
+import requests
+import os
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    print("❌ API KEY YOK")
+else:
+    print("✅ API KEY OK")
+
+GLOBAL_AI_CONTEXT = None
 
 CACHE_DIR = "/tmp/cache_data"
 os.makedirs(CACHE_DIR, exist_ok=True)
@@ -2015,6 +2025,16 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         hedef_kucuk_oran
     )
 
+    global GLOBAL_AI_CONTEXT
+    
+    GLOBAL_AI_CONTEXT = {
+        "toplam_kayit": len(scope_df),
+        "toplam_uretim": int(scope_df["adet"].sum()),
+        "kucuk_siparis_oran": float(len(filtered) / len(scope_df) * 100) if len(scope_df) else 0,
+        "profil_sayisi": int(scope_df["profil"].nunique()),
+        "musteri_sayisi": int(scope_df["musteri_siparis_no"].nunique()),
+    }
+
     result = (
         summary_small_text,
         boy_df,
@@ -2083,6 +2103,43 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         pass
     
     return result
+
+def ai_chat(user_message):
+    global GLOBAL_AI_CONTEXT
+
+    if GLOBAL_AI_CONTEXT is None:
+        return "Önce analiz çalıştır."
+
+    prompt = f"""
+    Sen bir üretim veri analizi uzmanısın.
+
+    Veri özeti:
+    {GLOBAL_AI_CONTEXT}
+
+    Kullanıcı sorusu:
+    {user_message}
+
+    Kısa, net ve iş odaklı cevap ver.
+    """
+
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+    )
+
+    try:
+        return response.json()["choices"][0]["message"]["content"]
+    except:
+        return f"Hata oluştu: {response.text}"
     
 def load_profile_detail(profil, excel_file, secilen_boy, mod, yillar):
     df = load_excel(excel_file)
@@ -2324,6 +2381,27 @@ with gr.Blocks(
                         with gr.Tab("Scenario Engine"):
                             scenario_md_box = gr.Markdown()
                             scenario_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        # 🤖 AI CHAT
+                        with gr.Tab("🤖 AI Asistan"):
+                        
+                            gr.Markdown("## 🤖 AI Analiz Asistanı")
+                        
+                            chat_input = gr.Textbox(
+                                label="Sorunu yaz",
+                                placeholder="Örn: Küçük sipariş oranı neden yüksek?"
+                            )
+                        
+                            chat_output = gr.Markdown()
+                        
+                            chat_btn = gr.Button("Sor")
+                        
+                            chat_btn.click(
+                                fn=ai_chat,
+                                inputs=chat_input,
+                                outputs=chat_output
+                            )
+
 
         # ✅ SAĞ → STICKY PANEL
         with gr.Column(scale=1, elem_id="side-panel"):
