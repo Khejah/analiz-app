@@ -2281,14 +2281,12 @@ def generate_professional_pdf(
     summary_small_text = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
     high_md = high_volume_summary_markdown(scope_df, int(secilen_boy))
     abc_df = build_abc_analysis(scope_df, hedef_uretim)
-    abc_md = abc_summary_markdown(abc_df)
+    abc_md = abc_summary_markdown(abc_df, scope_df)
 
     exec_summary = build_executive_summary(
         scope_df,
-        filtered,
         abc_df,
         int(secilen_boy),
-        hedef_uretim,
         hedef_kucuk_oran
     )
 
