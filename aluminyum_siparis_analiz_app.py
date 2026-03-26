@@ -2273,7 +2273,7 @@ def generate_professional_pdf(
 
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
     scope_df = filter_scope_data(df, selected_years, profil_ara)
-    filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
+    filtered = filter_data(scope_df, int(secilen_boy), mod, profil_ara)
 
     hedef_uretim = int(hedef_uretim)
     top_n_value = int(top_n_sec)
