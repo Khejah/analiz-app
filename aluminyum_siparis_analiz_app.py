@@ -11,6 +11,10 @@ import unicodedata
 import io
 from datetime import datetime
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+pdfmetrics.registerFont(TTFont('DejaVu', 'DejaVuSans.ttf'))
+pdfmetrics.registerFont(TTFont('DejaVu-Bold', 'DejaVuSans-Bold.ttf'))
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -2157,7 +2161,7 @@ def build_pdf_styles():
         "title": ParagraphStyle(
             "ReportTitle",
             parent=styles["Title"],
-            fontName="Helvetica-Bold",
+            fontName="DejaVu-Bold",
             fontSize=22,
             leading=28,
             alignment=TA_CENTER,
@@ -2167,7 +2171,7 @@ def build_pdf_styles():
         "subtitle": ParagraphStyle(
             "ReportSubtitle",
             parent=styles["Normal"],
-            fontName="Helvetica",
+            fontName="DejaVu",
             fontSize=10,
             leading=14,
             alignment=TA_CENTER,
@@ -2177,7 +2181,7 @@ def build_pdf_styles():
         "section": ParagraphStyle(
             "ReportSection",
             parent=styles["Heading2"],
-            fontName="Helvetica-Bold",
+            fontName="DejaVu-Bold",
             fontSize=14,
             leading=18,
             textColor=colors.HexColor("#0F172A"),
@@ -2187,7 +2191,7 @@ def build_pdf_styles():
         "body": ParagraphStyle(
             "ReportBody",
             parent=styles["BodyText"],
-            fontName="Helvetica",
+            fontName="DejaVu",
             fontSize=9.5,
             leading=13,
             alignment=TA_LEFT,
@@ -2197,7 +2201,7 @@ def build_pdf_styles():
         "small": ParagraphStyle(
             "ReportSmall",
             parent=styles["BodyText"],
-            fontName="Helvetica",
+            fontName="DejaVu",
             fontSize=8,
             leading=11,
             textColor=colors.HexColor("#64748B"),
@@ -2216,7 +2220,8 @@ def dataframe_to_pdf_table(df: pd.DataFrame, max_rows: int = 20, col_widths=None
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, 0), "DejaVu-Bold"),
+        ("FONTNAME", (0, 1), (-1, -1), "DejaVu"),
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("LEADING", (0, 0), (-1, -1), 10),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
@@ -2238,10 +2243,10 @@ def add_pdf_header_footer(canvas, doc):
     canvas.line(15 * mm, height - 12 * mm, width - 15 * mm, height - 12 * mm)
     canvas.line(15 * mm, 12 * mm, width - 15 * mm, 12 * mm)
 
-    canvas.setFont("Helvetica-Bold", 9)
+    canvas.setFont("DejaVu-Bold", 9)
     canvas.drawString(15 * mm, height - 9 * mm, "Üretim Analiz ve Karar Destek Platformu")
 
-    canvas.setFont("Helvetica", 8)
+    canvas.setFont("DejaVu", 8)
     canvas.drawRightString(
         width - 15 * mm,
         height - 9 * mm,
