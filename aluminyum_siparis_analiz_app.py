@@ -8,9 +8,27 @@ import hashlib
 import json
 import re
 import unicodedata
+import io
+from datetime import datetime
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+    Image,
+    PageBreak,
+)
 
 CACHE_DIR = "/tmp/cache_data"
+REPORT_DIR = "/tmp/generated_reports"
 os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(REPORT_DIR, exist_ok=True)
 
 COLUMN_ALIASES = {
     "tarih": ["Tarih", "TARIH", "date", "tarih_"],
@@ -2108,6 +2126,337 @@ def years_from_file(excel_file):
     years = sorted(df["yil"].unique().tolist())
     return gr.update(choices=years, value=years)
 
+# PDF KODLARININ BAŞLANĞIÇ YERİ AŞAĞISI
+def clean_markdown_for_pdf(text: str) -> str:
+    if not text:
+        return ""
+    text = str(text)
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+    text = text.replace("**", "").replace("__", "")
+    text = text.replace("`", "")
+    text = text.replace("•", "-")
+    text = re.sub(r"^[-*]\s*", "• ", text, flags=re.MULTILINE)
+    text = text.replace("\n", "<br/>")
+    return text
+
+
+def export_plotly_figure(fig, filename: str) -> str:
+    if fig is None:
+        return ""
+    path = os.path.join(REPORT_DIR, filename)
+    try:
+        fig.write_image(path, width=1400, height=800, scale=2)
+        return path
+    except Exception:
+        return ""
+
+
+def build_pdf_styles():
+    styles = getSampleStyleSheet()
+    return {
+        "title": ParagraphStyle(
+            "ReportTitle",
+            parent=styles["Title"],
+            fontName="Helvetica-Bold",
+            fontSize=22,
+            leading=28,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=10,
+        ),
+        "subtitle": ParagraphStyle(
+            "ReportSubtitle",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=10,
+            leading=14,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#475569"),
+            spaceAfter=18,
+        ),
+        "section": ParagraphStyle(
+            "ReportSection",
+            parent=styles["Heading2"],
+            fontName="Helvetica-Bold",
+            fontSize=14,
+            leading=18,
+            textColor=colors.HexColor("#0F172A"),
+            spaceBefore=10,
+            spaceAfter=8,
+        ),
+        "body": ParagraphStyle(
+            "ReportBody",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=9.5,
+            leading=13,
+            alignment=TA_LEFT,
+            textColor=colors.HexColor("#111827"),
+            spaceAfter=6,
+        ),
+        "small": ParagraphStyle(
+            "ReportSmall",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=8,
+            leading=11,
+            textColor=colors.HexColor("#64748B"),
+        ),
+    }
+
+
+def dataframe_to_pdf_table(df: pd.DataFrame, max_rows: int = 20, col_widths=None):
+    if df is None or df.empty:
+        data = [["Bilgi", "Kayıt bulunamadı"]]
+    else:
+        limited = df.head(max_rows).copy()
+        data = [list(limited.columns)] + limited.fillna("").astype(str).values.tolist()
+
+    table = Table(data, repeatRows=1, colWidths=col_widths)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("LEADING", (0, 0), (-1, -1), 10),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.HexColor("#F8FAFC")]),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    return table
+
+
+def add_pdf_header_footer(canvas, doc):
+    canvas.saveState()
+    width, height = A4
+    canvas.setStrokeColor(colors.HexColor("#CBD5E1"))
+    canvas.setLineWidth(0.5)
+    canvas.line(15 * mm, height - 12 * mm, width - 15 * mm, height - 12 * mm)
+    canvas.line(15 * mm, 12 * mm, width - 15 * mm, 12 * mm)
+
+    canvas.setFont("Helvetica-Bold", 9)
+    canvas.drawString(15 * mm, height - 9 * mm, "Üretim Analiz ve Karar Destek Platformu")
+
+    canvas.setFont("Helvetica", 8)
+    canvas.drawRightString(
+        width - 15 * mm,
+        height - 9 * mm,
+        datetime.now().strftime("Rapor tarihi: %d.%m.%Y %H:%M")
+    )
+
+    canvas.drawString(15 * mm, 7 * mm, "Oluşturulan çıktı: Yönetici PDF raporu")
+    canvas.drawRightString(width - 15 * mm, 7 * mm, f"Sayfa {canvas.getPageNumber()}")
+    canvas.restoreState()
+
+
+def generate_professional_pdf(
+    excel_file,
+    secilen_boy,
+    mod,
+    yillar,
+    profil_ara,
+    hedef_uretim,
+    top_n_sec,
+    hedef_kucuk_oran
+):
+    if excel_file is None:
+        raise gr.Error("Önce Excel dosyası yükleyin.")
+
+    try:
+        df = load_excel(excel_file)
+    except Exception as e:
+        raise gr.Error(f"PDF üretilemedi: {str(e)}")
+
+    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+    scope_df = filter_scope_data(df, selected_years, profil_ara)
+    filtered = filter_data(df, int(secilen_boy), mod, selected_years, profil_ara)
+
+    hedef_uretim = int(hedef_uretim)
+    top_n_value = int(top_n_sec)
+
+    summary_small_text = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
+    high_md = high_volume_summary_markdown(scope_df, int(secilen_boy))
+    abc_df = build_abc_analysis(scope_df, hedef_uretim)
+    abc_md = abc_summary_markdown(abc_df)
+
+    exec_summary = build_executive_summary(
+        scope_df,
+        filtered,
+        abc_df,
+        int(secilen_boy),
+        hedef_uretim,
+        hedef_kucuk_oran
+    )
+
+    dashboard_kpi_df = build_dashboard_kpis(scope_df)
+    dashboard_monthly_df = build_dashboard_monthly(scope_df)
+    dashboard_top_profiles_df = build_dashboard_top_profiles(scope_df, top_n=15)
+    dashboard_termin_df = build_termin_dashboard(scope_df)
+    forecast_df = build_forecast_table(scope_df)
+    scenario_df = build_scenario_table(scope_df, int(secilen_boy), hedef_kucuk_oran)
+    scenario_md = scenario_summary_markdown(scope_df, int(secilen_boy), hedef_kucuk_oran)
+    profile_df = build_profile_summary(filtered, hedef_uretim)
+
+    monthly_fig = dashboard_monthly_chart(dashboard_monthly_df)
+    abc_fig = abc_chart(abc_df, top_n_value)
+    small_order_fig = small_order_load_chart(
+        build_small_order_monthly(scope_df, int(secilen_boy)),
+        int(secilen_boy)
+    )
+    top_profiles_fig = dashboard_top_profiles_chart(dashboard_top_profiles_df)
+    termin_fig = dashboard_termin_chart(dashboard_termin_df)
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pdf_path = os.path.join(REPORT_DIR, f"uretim_analiz_raporu_{ts}.pdf")
+    styles = build_pdf_styles()
+
+    chart_paths = [
+        export_plotly_figure(monthly_fig, f"monthly_{ts}.png"),
+        export_plotly_figure(abc_fig, f"abc_{ts}.png"),
+        export_plotly_figure(small_order_fig, f"small_order_{ts}.png"),
+        export_plotly_figure(top_profiles_fig, f"top_profiles_{ts}.png"),
+        export_plotly_figure(termin_fig, f"termin_{ts}.png"),
+    ]
+
+    doc = SimpleDocTemplate(
+        pdf_path,
+        pagesize=A4,
+        topMargin=20 * mm,
+        bottomMargin=18 * mm,
+        leftMargin=15 * mm,
+        rightMargin=15 * mm,
+    )
+
+    yil_text = ", ".join(str(y) for y in selected_years) if selected_years else "Tüm yıllar"
+    profil_text = profil_ara if str(profil_ara).strip() else "Tüm profiller"
+
+    elements = []
+
+    elements.append(Spacer(1, 18 * mm))
+    elements.append(Paragraph("Profesyonel Üretim Analiz Raporu", styles["title"]))
+    elements.append(Paragraph(
+        "Küçük sipariş yükü, ABC sınıflandırması, yönetici özeti, tahmin ve senaryo analizi",
+        styles["subtitle"]
+    ))
+
+    cover_info = pd.DataFrame([
+        ["Rapor Kapsamı", "Operasyon + Yönetim Karar Desteği"],
+        ["Seçilen Boy", str(secilen_boy)],
+        ["Analiz Modu", str(mod)],
+        ["Yıllar", yil_text],
+        ["Profil Filtresi", profil_text],
+        ["Yıllık Üretim Frekansı", str(hedef_uretim)],
+        ["Hedef Küçük Sipariş Oranı", f"%{float(hedef_kucuk_oran):.0f}"],
+    ], columns=["Parametre", "Değer"])
+
+    elements.append(dataframe_to_pdf_table(
+        cover_info,
+        max_rows=20,
+        col_widths=[55 * mm, 110 * mm]
+    ))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(clean_markdown_for_pdf(exec_summary), styles["body"]))
+    elements.append(PageBreak())
+
+    elements.append(Paragraph("1. Yönetici Özeti", styles["section"]))
+    elements.append(Paragraph(clean_markdown_for_pdf(exec_summary), styles["body"]))
+
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph("2. KPI Özeti", styles["section"]))
+    elements.append(dataframe_to_pdf_table(
+        dashboard_kpi_df,
+        max_rows=20,
+        col_widths=[70 * mm, 40 * mm]
+    ))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("3. Küçük Sipariş Özeti", styles["section"]))
+    elements.append(Paragraph(clean_markdown_for_pdf(summary_small_text), styles["body"]))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("4. Büyük Sipariş Özeti", styles["section"]))
+    elements.append(Paragraph(clean_markdown_for_pdf(high_md), styles["body"]))
+    elements.append(PageBreak())
+
+    elements.append(Paragraph("5. ABC Analizi ve Stok Önerisi", styles["section"]))
+    elements.append(Paragraph(clean_markdown_for_pdf(abc_md), styles["body"]))
+    elements.append(dataframe_to_pdf_table(abc_df, max_rows=15))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("6. Senaryo Özeti", styles["section"]))
+    elements.append(Paragraph(clean_markdown_for_pdf(scenario_md), styles["body"]))
+    elements.append(dataframe_to_pdf_table(
+        scenario_df,
+        max_rows=15,
+        col_widths=[95 * mm, 55 * mm]
+    ))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("7. Kritik Profil Özeti", styles["section"]))
+    elements.append(dataframe_to_pdf_table(profile_df, max_rows=15))
+    elements.append(PageBreak())
+
+    elements.append(Paragraph("8. Grafikler", styles["section"]))
+    chart_titles = [
+        "Aylık Üretim Trendi",
+        "ABC Analizi",
+        "Küçük Siparişlerin Üretim Payı",
+        "En Çok Üretilen Profiller",
+        "Termin Performansı",
+    ]
+
+    for title, path in zip(chart_titles, chart_paths):
+        if path and os.path.exists(path):
+            elements.append(Paragraph(title, styles["section"]))
+            elements.append(Image(path, width=175 * mm, height=95 * mm))
+            elements.append(Spacer(1, 8))
+
+    elements.append(PageBreak())
+    elements.append(Paragraph("9. Dashboard Tabloları", styles["section"]))
+
+    elements.append(Paragraph("Aylık Dashboard Verisi", styles["section"]))
+    elements.append(dataframe_to_pdf_table(dashboard_monthly_df, max_rows=18))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("Top Profil Listesi", styles["section"]))
+    elements.append(dataframe_to_pdf_table(dashboard_top_profiles_df, max_rows=15))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("Termin Özeti", styles["section"]))
+    elements.append(dataframe_to_pdf_table(
+        dashboard_termin_df,
+        max_rows=10,
+        col_widths=[80 * mm, 35 * mm]
+    ))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("Forecast Özeti", styles["section"]))
+    elements.append(dataframe_to_pdf_table(forecast_df, max_rows=15))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("Not", styles["section"]))
+    elements.append(Paragraph(
+        "Bu rapor uygulamadaki seçili filtrelere göre otomatik oluşturulmuştur. "
+        "Grafiklerin görüntülenebilmesi için sunucuda kaleido kurulu olmalıdır.",
+        styles["small"]
+    ))
+
+    try:
+        doc.build(
+            elements,
+            onFirstPage=add_pdf_header_footer,
+            onLaterPages=add_pdf_header_footer
+        )
+    except Exception as e:
+        raise gr.Error(f"PDF oluşturulamadı: {str(e)}")
+
+    return pdf_path
+#PDF KODLARININ BİTİŞ YERİ KODLAR YUKARISI
+
 with gr.Blocks(
     title="Alüminyum Sipariş Boy Analizi",
 ) as demo:
@@ -2375,6 +2724,8 @@ with gr.Blocks(
 
             load_btn = gr.Button("📅 Yılları Yükle")
             analyze_btn = gr.Button("🚀 Analizi Başlat", variant="primary")
+            pdf_btn = gr.Button("📄 Profesyonel PDF Oluştur")
+            pdf_output = gr.File(label="Hazır PDF Raporu")
 
     load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
     
@@ -2432,6 +2783,21 @@ with gr.Blocks(
             scenario_md_box,
             scenario_table
         ],
+    )
+
+    pdf_btn.click(
+        fn=generate_professional_pdf,
+        inputs=[
+            excel_file,
+            secilen_boy,
+            mod,
+            years,
+            profil_ara,
+            hedef_uretim,
+            top_n_sec,
+            hedef_kucuk_oran
+        ],
+        outputs=pdf_output
     )
 
     profil_sec.change(
