@@ -1,4 +1,4 @@
-print("🚀 VERSION: SERDAR-KODDER-V1")
+print("🚀 VERSION: KAPTAN-SERDAR-KODDER-V1.2")
 
 from typing import Iterable, Optional
 
@@ -67,6 +67,12 @@ UI_COLS = {
     "siparis_sayisi": "Sipariş Sayısı",
 }
 
+NORMALIZED_ALIAS_MAP = {
+    "tarih": ["tarih", "date", "işlem tarihi", "sipariş tarihi"],
+    "miktar": ["miktar", "adet", "qty", "quantity"],
+    "urun": ["urun", "ürün", "product", "malzeme"],
+    "fiyat": ["fiyat", "price", "birim fiyat"],
+}
 def normalize_col(s: str) -> str:
     s = str(s).strip().lower()
     s = s.replace("ı", "i").replace("İ", "i").replace("I", "i")
