@@ -2197,7 +2197,13 @@ def fast_years_from_file(excel_file):
     file_hash = hashlib.md5(
         f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
     ).hexdigest()
-    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
+    try:
+        with pd.ExcelFile(excel_path) as xls:
+            sheet_name = xls.sheet_names[0]
+    except Exception as e:
+        raise gr.Error(f"Excel okunamadı: {str(e)}")
+    
+    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}_{sheet_name}.parquet")
 
     try:
         if os.path.exists(parquet_path):
@@ -2679,6 +2685,7 @@ def generate_professional_pdf(
 
 with gr.Blocks(
     title="Alüminyum Sipariş Boy Analizi",
+    theme=gr.themes.Soft()
 ) as demo:
 
     # 🔥 STICKY PANEL CSS
@@ -3040,7 +3047,6 @@ if __name__ == "__main__":
     demo.queue().launch(
         server_name="0.0.0.0",
         server_port=port,
-        theme=gr.themes.Soft(),
         favicon_path="favicon.png",
         show_error=True
     )
