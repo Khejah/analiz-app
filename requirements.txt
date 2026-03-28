@@ -7,3 +7,4 @@ rapidfuzz
 pyarrow
 reportlab
 kaleido
+python-calamine>=0.2.0
