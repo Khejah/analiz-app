@@ -29,8 +29,9 @@ from reportlab.platypus import (
     PageBreak,
 )
 
-CACHE_DIR = "/tmp/cache_data"
-REPORT_DIR = "/tmp/generated_reports"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CACHE_DIR = os.path.join(BASE_DIR, "cache_data")
+REPORT_DIR = os.path.join(BASE_DIR, "generated_reports")
 os.makedirs(CACHE_DIR, exist_ok=True)
 os.makedirs(REPORT_DIR, exist_ok=True)
 
@@ -72,42 +73,26 @@ def normalize_col(s: str) -> str:
     s = re.sub(r"[^a-z0-9]+", "_", s)
     return s.strip("_")
     
-def get_file_hash(file_path: str) -> str:
-    hasher = hashlib.md5()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hasher.update(chunk)
-    return hasher.hexdigest()
+def stable_hash(data) -> str:
+    payload = json.dumps(data, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.md5(payload.encode("utf-8")).hexdigest()
+
+def get_excel_signature(excel_file) -> str:
+    if excel_file is None:
+        return "no_file"
+
+    if hasattr(excel_file, "name") and os.path.exists(excel_file.name):
+        excel_path = excel_file.name
+    else:
+        excel_path = str(excel_file)
+        if not os.path.exists(excel_path):
+            return "missing_file"
+
+    stat = os.stat(excel_path)
+    return hashlib.md5(
+        f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
+    ).hexdigest()
     
-NORMALIZED_ALIAS_MAP = {
-    key: {normalize_col(x) for x in vals} for key, vals in COLUMN_ALIASES.items()
-}
-
-
-def detect_header_row(excel_path, sheet_name: Optional[str] = None, max_rows: int = 15) -> int:
-    preview = pd.read_excel(
-        excel_path,
-        sheet_name=sheet_name,
-        header=None,
-        nrows=max_rows
-    )
-    preview = preview.fillna("")
-
-    best_idx = 0
-    best_score = -1
-    for idx in range(len(preview)):
-        row = [normalize_col(x) for x in preview.iloc[idx].tolist() if pd.notna(x)]
-        score = 0
-        rowset = set(row)
-        for aliases in NORMALIZED_ALIAS_MAP.values():
-            if rowset & aliases:
-                score += 1
-        if score > best_score:
-            best_score = score
-            best_idx = idx
-    return best_idx
-
-
 def find_column(df: pd.DataFrame, logical_name: str) -> Optional[str]:
     aliases = NORMALIZED_ALIAS_MAP[logical_name]
     normalized_columns = {col: normalize_col(col) for col in df.columns}
@@ -118,7 +103,6 @@ def find_column(df: pd.DataFrame, logical_name: str) -> Optional[str]:
 
     return None
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAPPING_FILE = os.path.join(BASE_DIR, "musteri_mapping.json")
 
 def load_customer_mapping():
@@ -181,7 +165,10 @@ def load_excel(excel_file) -> pd.DataFrame:
         if not os.path.exists(excel_path):
             raise ValueError("Dosya yolu alınamadı")
 
-    file_hash = get_file_hash(excel_path)
+    stat = os.stat(excel_path)
+    file_hash = hashlib.md5(
+        f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
+    ).hexdigest()
     cache_path = os.path.join(CACHE_DIR, f"{file_hash}.pkl")
     parquet_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
 
@@ -224,13 +211,10 @@ def load_excel(excel_file) -> pd.DataFrame:
         except Exception:
             pass
     try:
-        xls = pd.ExcelFile(excel_path)
+        df = pd.read_excel(excel_path, header=0)
     except Exception as e:
         raise ValueError(f"Excel okunamadı: {str(e)}")
 
-    sheet_name = xls.sheet_names[0]
-    header_row = detect_header_row(excel_path, sheet_name=sheet_name)
-    df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
     df = df.dropna(axis=1, how="all").dropna(how="all").copy()
 
     tarih_col = find_column(df, "tarih")
@@ -1964,7 +1948,19 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     try:
         df = load_excel(excel_file)
         # 🚀 ANALİZ CACHE
-        analysis_cache_path = os.path.join(CACHE_DIR, f"analysis_{hash(str([secilen_boy, mod, yillar, profil_ara, hedef_uretim]))}.pkl")
+        analysis_key = stable_hash([
+            excel_signature,
+            secilen_boy,
+            mod,
+            sorted([int(str(y)) for y in yillar]) if yillar else [],
+            (profil_ara or "").strip().upper(),
+            hedef_uretim,
+            top_n_sec,
+            hedef_kucuk_oran,
+        ])
+        
+        analysis_cache_path = os.path.join(CACHE_DIR, f"analysis_{analysis_key}.pkl")
+        excel_signature = get_excel_signature(excel_file)
         
         if os.path.exists(analysis_cache_path):
             try:
@@ -2124,10 +2120,53 @@ def load_profile_detail(profil, excel_file, secilen_boy, mod, yillar):
 
     return yearly, boy_dist, summary
 
+def fast_years_from_file(excel_file):
+    if excel_file is None:
+        raise gr.Error("Lütfen bir Excel dosyası yükleyin.")
 
-def years_from_file(excel_file):
-    df = load_excel(excel_file)
-    years = sorted(df["yil"].unique().tolist())
+    if hasattr(excel_file, "name") and os.path.exists(excel_file.name):
+        excel_path = excel_file.name
+    else:
+        excel_path = str(excel_file)
+        if not os.path.exists(excel_path):
+            raise gr.Error("Dosya yolu alınamadı.")
+
+    stat = os.stat(excel_path)
+    file_hash = hashlib.md5(
+        f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
+    ).hexdigest()
+    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
+
+    try:
+        if os.path.exists(parquet_path):
+            df = pd.read_parquet(parquet_path, columns=["tarih"])
+            years = sorted(df["tarih"].dropna().dt.year.astype(int).unique().tolist())
+            return gr.update(choices=years, value=years)
+    except Exception:
+        pass
+
+    try:
+        df = pd.read_excel(excel_path, usecols=["Tarih"])
+    except ValueError:
+        df = pd.read_excel(excel_path)
+        tarih_col = None
+        for col in df.columns:
+            if str(col).strip().lower() in ["tarih", "tari̇h"]:
+                tarih_col = col
+                break
+
+        if tarih_col is None:
+            raise gr.Error("Tarih kolonu bulunamadı.")
+
+        df = df[[tarih_col]].copy()
+        df.columns = ["Tarih"]
+
+    except Exception as e:
+        raise gr.Error(f"Yıllar yüklenemedi: {str(e)}")
+
+    df["Tarih"] = pd.to_datetime(df["Tarih"], errors="coerce", dayfirst=True)
+    years = sorted(df["Tarih"].dt.year.dropna().astype(int).unique().tolist())
+
     return gr.update(choices=years, value=years)
     
 def remove_emojis_for_pdf(text: str) -> str:
@@ -2855,7 +2894,7 @@ with gr.Blocks(
             pdf_btn = gr.Button("📄 Profesyonel PDF Oluştur")
             pdf_output = gr.File(label="Hazır PDF Raporu")
 
-    load_btn.click(fn=years_from_file, inputs=excel_file, outputs=years)
+    load_btn.click(fn=fast_years_from_file, inputs=excel_file, outputs=years)
     
     analyze_btn.click(
         fn=analyze,
