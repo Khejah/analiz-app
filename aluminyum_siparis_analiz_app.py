@@ -391,6 +391,82 @@ def filter_never_exceed_profiles(scope_df: pd.DataFrame, secilen_boy: int, profi
 
     result = filtered[filtered["profil"].isin(uygun_profiller)].copy()
     return result
+
+def build_never_profile_repeat(never_df: pd.DataFrame):
+    if never_df.empty:
+        return pd.DataFrame(columns=[
+            "Profil Kodu",
+            "Farklı Sipariş Sayısı",
+            "Toplam Üretim (Boy)",
+            "Ortalama Sipariş Boyu",
+            "İlk Sipariş Tarihi",
+            "Son Sipariş Tarihi",
+        ])
+
+    repeat = never_df.groupby("profil").agg(
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+        toplam_boy=("adet", "sum"),
+        ortalama_boy=("adet", "mean"),
+        ilk_siparis=("tarih", "min"),
+        son_siparis=("tarih", "max"),
+    ).reset_index()
+
+    repeat["ortalama_boy"] = repeat["ortalama_boy"].round(2)
+    repeat["ilk_siparis"] = repeat["ilk_siparis"].dt.strftime("%Y-%m-%d")
+    repeat["son_siparis"] = repeat["son_siparis"].dt.strftime("%Y-%m-%d")
+
+    repeat = repeat.rename(columns={
+        "profil": "Profil Kodu",
+        "siparis_sayisi": "Farklı Sipariş Sayısı",
+        "toplam_boy": "Toplam Üretim (Boy)",
+        "ortalama_boy": "Ortalama Sipariş Boyu",
+        "ilk_siparis": "İlk Sipariş Tarihi",
+        "son_siparis": "Son Sipariş Tarihi",
+    })
+
+    return repeat.sort_values("Farklı Sipariş Sayısı", ascending=False)
+
+def build_never_repeat_distribution(repeat_df):
+    if repeat_df.empty:
+        return pd.DataFrame(columns=["Tekrar Sayısı", "Profil Sayısı"])
+
+    dist = (
+        repeat_df["Farklı Sipariş Sayısı"]
+        .value_counts()
+        .sort_index()
+        .reset_index()
+    )
+    dist.columns = ["Tekrar Sayısı", "Profil Sayısı"]
+    return dist
+
+def add_repeat_segment(df):
+    if df.empty:
+        return df
+
+    def segment(x):
+        if x == 1:
+            return "Tek Seferlik"
+        elif x <= 3:
+            return "Düşük Tekrar"
+        else:
+            return "Potansiyel"
+
+    df["Segment"] = df["Farklı Sipariş Sayısı"].apply(segment)
+    return df
+
+def never_repeat_chart_func(dist_df):
+    if dist_df.empty:
+        return None
+
+    fig = px.bar(
+        dist_df,
+        x="Tekrar Sayısı",
+        y="Profil Sayısı",
+        title="Eşiği Geçmeyen Profiller - Tekrar Dağılımı",
+        text="Profil Sayısı"
+    )
+    return fig
+    
     
 def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFrame:
     if filtered.empty:
@@ -2032,6 +2108,9 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     never_boy_df = build_boy_breakdown(never_exceed_df, int(secilen_boy))
     never_profile_df = build_profile_summary(never_exceed_df, hedef_uretim)
     never_year_df = build_year_summary(never_exceed_df)
+    never_repeat_df = build_never_profile_repeat(never_exceed_df)
+    never_repeat_df = add_repeat_segment(never_repeat_df)
+    never_repeat_dist = build_never_repeat_distribution(never_repeat_df)
     
     never_raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     never_raw_df = never_exceed_df[never_raw_cols].sort_values("tarih", ascending=False).copy() if not never_exceed_df.empty else pd.DataFrame(columns=never_raw_cols)
@@ -2095,6 +2174,9 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         never_boy_df,
         never_year_df,
         never_profile_df,
+        never_repeat_df,
+        never_repeat_dist,
+        never_repeat_chart_func(never_repeat_dist),
         never_raw_df.head(500),
         never_chart_boy,
         never_chart_profile,
@@ -2152,7 +2234,8 @@ def load_profile_detail(profil, excel_file, secilen_boy, mod, yillar):
     df = GLOBAL_DF if GLOBAL_DF is not None else load_excel(excel_file)
 
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
-    filtered = filter_data(df, int(secilen_boy), mod, "")
+    scoped = filter_scope_data(df, selected_years, "")
+    filtered = filter_data(scoped, int(secilen_boy), mod, "")
 
     yearly, boy_dist, toplam, siparis = build_profile_detail(filtered, profil, selected_years)
 
@@ -2803,6 +2886,11 @@ with gr.Blocks(
                         with gr.Tab("Ham Kayıt Önizleme"):
                             never_raw_table = gr.Dataframe(interactive=False, wrap=True)
 
+                        with gr.Tab("🔁 Tekrar Analizi"):
+                            never_repeat_table = gr.Dataframe(label="Profil Tekrar Özeti", interactive=False, wrap=True)
+                            never_repeat_dist_table = gr.Dataframe(label="Tekrar Dağılımı", interactive=False, wrap=True)
+                            never_repeat_chart = gr.Plot(label="Tekrar Dağılım Grafiği")
+
                 with gr.Tab("📈 Büyük Sipariş Analizi (Core Üretim)"):
                     high_summary = gr.Markdown()
                     high_chart = gr.Plot(label="En Çok Üretime Giren Profiller")
@@ -2983,6 +3071,9 @@ with gr.Blocks(
             never_boy_table,
             never_year_table,
             never_profile_table,
+            never_repeat_table,
+            never_repeat_dist_table,
+            never_repeat_chart,
             never_raw_table,
             never_chart1,
             never_chart2,
