@@ -1,3 +1,5 @@
+print("🚀 VERSION: SERDAR-KODDER-V1")
+
 from typing import Iterable, Optional
 
 import gradio as gr
@@ -2148,7 +2150,7 @@ def fast_years_from_file(excel_file):
     try:
         xls = pd.ExcelFile(excel_path)
         sheet_name = xls.sheet_names[0]
-        header_row = detect_header_row(excel_path, sheet_name=sheet_name)
+        header_row = 0
         df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
     except Exception as e:
         raise gr.Error(f"Excel okunamadı: {str(e)}")
