@@ -1,4 +1,6 @@
 print("🚀 VERSION: KAPTAN-SERDAR-KODDER-V1.2")
+print("HEADER ROW (LOAD):", header_row)
+print("COLUMNS:", df.columns.tolist())
 
 from typing import Iterable, Optional
 
@@ -73,7 +75,7 @@ UI_COLS = {
 }
 
 COLUMN_ALIASES_PRO = {
-    "tarih": ["tarih", "date", "islemtarihi", "siparistarihi", "Tarih", "TARIH", "date", "tarih_"],
+    "tarih": ["Tarih", "tarih", "date", "islemtarihi", "siparistarihi", "TARIH", "date", "tarih_"],
     "profil": ["profil", "profilno", "profilkodu", "Profil No", "Profil", "profil_kodu", "profil_no"],
     "siparis_no": ["Siparis No", "siparisno", "sipno", "orderno", "Sipariş No", "siparis_no", "order_no", "sip_no"],
     "adet": ["Adet", "adet", "miktar", "qty", "quantity"],
@@ -145,6 +147,28 @@ def find_column_smart(df, target):
                     return col
 
     return None
+
+def detect_header_row(excel_path, sheet_name=0, max_rows=10):
+    preview = pd.read_excel(excel_path, sheet_name=sheet_name, header=None, nrows=max_rows)
+
+    best_row = 0
+    best_score = -1
+
+    expected = ["tarih", "profil", "siparis", "adet", "kg", "firma", "pres", "termin"]
+
+    for i in range(len(preview)):
+        vals = [str(x).lower().strip() for x in preview.iloc[i].tolist() if pd.notna(x)]
+
+        score = 0
+        for e in expected:
+            if any(e in v for v in vals):
+                score += 1
+
+        if score > best_score:
+            best_score = score
+            best_row = i
+
+    return best_row
 
 def load_customer_mapping():
     if not os.path.exists(MAPPING_FILE):
@@ -219,6 +243,7 @@ def load_excel(excel_file) -> pd.DataFrame:
     try:
         with pd.ExcelFile(excel_path) as xls:
             sheet_name = xls.sheet_names[0]
+        header_row = detect_header_row(excel_path, sheet_name)
     except Exception as e:
         raise ValueError(f"Excel okunamadı: {str(e)}")
     
@@ -270,7 +295,7 @@ def load_excel(excel_file) -> pd.DataFrame:
             pass
 
     try:
-        df = pd.read_excel(excel_path, sheet_name=sheet_name)
+        df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
     except Exception as e:
         raise ValueError(f"Excel okunamadı: {str(e)}")
 
@@ -2200,6 +2225,7 @@ def fast_years_from_file(excel_file):
     try:
         with pd.ExcelFile(excel_path) as xls:
             sheet_name = xls.sheet_names[0]
+        header_row = detect_header_row(excel_path, sheet_name)
     except Exception as e:
         raise gr.Error(f"Excel okunamadı: {str(e)}")
     
@@ -2214,7 +2240,7 @@ def fast_years_from_file(excel_file):
         pass
 
     try:
-        raw_df = pd.read_excel(excel_path)
+        raw_df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
     except Exception as e:
         raise gr.Error(f"Excel okunamadı: {str(e)}")
     
