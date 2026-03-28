@@ -11,6 +11,7 @@ import json
 import re
 import unicodedata
 import io
+from difflib import get_close_matches
 from datetime import datetime
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
@@ -32,6 +33,7 @@ from reportlab.platypus import (
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MAPPING_FILE = os.path.join(BASE_DIR, "musteri_mapping.json")
 CACHE_DIR = os.path.join(BASE_DIR, "cache_data")
 REPORT_DIR = os.path.join(BASE_DIR, "generated_reports")
 os.makedirs(CACHE_DIR, exist_ok=True)
@@ -67,12 +69,28 @@ UI_COLS = {
     "siparis_sayisi": "Sipariş Sayısı",
 }
 
-NORMALIZED_ALIAS_MAP = {
-    "tarih": ["tarih", "date", "işlem tarihi", "sipariş tarihi"],
-    "miktar": ["miktar", "adet", "qty", "quantity"],
-    "urun": ["urun", "ürün", "product", "malzeme"],
-    "fiyat": ["fiyat", "price", "birim fiyat"],
+COLUMN_ALIASES_PRO = {
+    "tarih": ["tarih", "date", "islemtarihi", "siparistarihi", "Tarih", "TARIH", "date", "tarih_"],
+    "profil": ["profil", "profilno", "profilkodu", "Profil No", "Profil", "profil_kodu", "profil_no"],
+    "siparis_no": ["Siparis No", "siparisno", "sipno", "orderno", "Sipariş No", "siparis_no", "order_no", "sip_no"],
+    "adet": ["Adet", "adet", "miktar", "qty", "quantity"],
+    "kg": ["Kg", "kilogram", "kg"],
+    "firma": ["firma", "firmaadi", "Firma Adi"],
+    "musteri": ["musteri", "musterisiparisno", "Mus.Siparis No"],
+    "pres": ["Pres Adi", "pres"],
+    "termin": ["Termin", "termin"],
 }
+
+def normalize_text(s):
+    if s is None:
+        return ""
+    s = str(s).strip().lower()
+    s = s.replace("ı", "i").replace("İ", "i")
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = re.sub(r"[^a-z0-9]+", "", s)
+    return s
+    
 def normalize_col(s: str) -> str:
     s = str(s).strip().lower()
     s = s.replace("ı", "i").replace("İ", "i").replace("I", "i")
@@ -101,17 +119,47 @@ def get_excel_signature(excel_file) -> str:
         f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
     ).hexdigest()
     
-def find_column(df: pd.DataFrame, logical_name: str) -> Optional[str]:
-    aliases = NORMALIZED_ALIAS_MAP[logical_name]
-    normalized_columns = {col: normalize_col(col) for col in df.columns}
+def find_column_smart(df, target):
+    cols = list(df.columns)
+    norm_cols = {col: normalize_text(col) for col in cols}
 
-    for col, norm in normalized_columns.items():
+    aliases = COLUMN_ALIASES_PRO.get(target, [])
+    aliases = [normalize_text(a) for a in aliases]
+
+    # 1. exact match
+    for col, norm in norm_cols.items():
         if norm in aliases:
             return col
 
+    # 2. fuzzy match
+    all_norm_cols = list(norm_cols.values())
+    for alias in aliases:
+        matches = get_close_matches(alias, all_norm_cols, n=1, cutoff=0.8)
+        if matches:
+            matched_norm = matches[0]
+            for col, norm in norm_cols.items():
+                if norm == matched_norm:
+                    return col
+
     return None
 
-MAPPING_FILE = os.path.join(BASE_DIR, "musteri_mapping.json")
+def detect_header_row(excel_path, max_rows=10):
+    preview = pd.read_excel(excel_path, header=None, nrows=max_rows)
+
+    aliases = [normalize_text(a) for a in COLUMN_ALIASES_PRO["tarih"]]
+
+    for i, row in preview.iterrows():
+        row_values = [normalize_text(x) for x in row.tolist()]
+
+        hits = sum(
+            any(alias in val for alias in aliases)
+            for val in row_values
+        )
+
+        if hits > 0:
+            return i
+
+    return 0
 
 def load_customer_mapping():
     if not os.path.exists(MAPPING_FILE):
@@ -219,22 +267,23 @@ def load_excel(excel_file) -> pd.DataFrame:
         except Exception:
             pass
     try:
-        df = pd.read_excel(excel_path, header=0)
+        header_row = detect_header_row(excel_path)
+        df = pd.read_excel(excel_path, header=header_row)
     except Exception as e:
         raise ValueError(f"Excel okunamadı: {str(e)}")
 
     df = df.dropna(axis=1, how="all").dropna(how="all").copy()
 
-    tarih_col = find_column(df, "tarih")
-    profil_col = find_column(df, "profil")
-    siparis_col = find_column(df, "siparis_no")
-    adet_col = find_column(df, "adet")
-    kg_col = find_column(df, "kg")
-    musteri_col = find_column(df, "musteri")
-    firma_col = find_column(df, "firma")
-    pres_col = find_column(df, "pres")
-    termin_col = find_column(df, "termin")
-    termin_hafta_col = find_column(df, "termin_hafta")    
+    tarih_col = find_column_smart(df, "tarih")
+    profil_col = find_column_smart(df, "profil")
+    siparis_col = find_column_smart(df, "siparis_no")
+    adet_col = find_column_smart(df, "adet")
+    kg_col = find_column_smart(df, "kg")
+    musteri_col = find_column_smart(df, "musteri")
+    firma_col = find_column_smart(df, "firma")
+    pres_col = find_column_smart(df, "pres")
+    termin_col = find_column_smart(df, "termin")
+    termin_hafta_col = find_column_smart(df, "termin_hafta")    
 
     missing = [
         name for name, col in {
@@ -2156,12 +2205,12 @@ def fast_years_from_file(excel_file):
     try:
         xls = pd.ExcelFile(excel_path)
         sheet_name = xls.sheet_names[0]
-        header_row = 0
+        header_row = detect_header_row(excel_path)
         df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
     except Exception as e:
         raise gr.Error(f"Excel okunamadı: {str(e)}")
 
-    tarih_col = find_column(df, "tarih")
+    tarih_col = find_column_smart(df, "tarih")
     if tarih_col is None:
         raise gr.Error("Tarih kolonu bulunamadı (header kontrol et)")
 
