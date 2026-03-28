@@ -223,141 +223,107 @@ def load_excel(excel_file) -> pd.DataFrame:
     if excel_file is None:
         raise ValueError("Lütfen bir Excel dosyası yükleyin.")
 
-    if hasattr(excel_file, "name") and os.path.exists(excel_file.name):
-        excel_path = excel_file.name
-    else:
-        excel_path = str(excel_file)
-        if not os.path.exists(excel_path):
-            raise ValueError("Dosya yolu alınamadı")
+    excel_path = excel_file.name if hasattr(excel_file, "name") and os.path.exists(excel_file.name) else str(excel_file)
+    if not os.path.exists(excel_path):
+        raise ValueError("Dosya yolu alınamadı")
 
     stat = os.stat(excel_path)
-    file_hash = hashlib.md5(
-        f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
-    ).hexdigest()
+    file_hash = hashlib.md5(f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")).hexdigest()
 
+    # 🚀 GLOBAL CACHE HIZLI DÖNÜŞ
     if GLOBAL_DF is not None and GLOBAL_FILE_HASH == file_hash:
         return GLOBAL_DF
 
-    try:
-        with pd.ExcelFile(excel_path) as xls:
-            sheet_name = xls.sheet_names[0]
-        header_row = detect_header_row(excel_path, sheet_name)
-    except Exception as e:
-        raise ValueError(f"Excel okunamadı: {str(e)}")
-    
-    cache_path = os.path.join(CACHE_DIR, f"{file_hash}_{sheet_name}.pkl")
-    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}_{sheet_name}.parquet")
-
-    # 🚀 ULTRA FAST PARQUET CACHE
+    # 🚀 1. PARQUET FULL CACHE ÖNCELİKLİ
+    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}_full.parquet")
     if os.path.exists(parquet_path):
         try:
-            df_fast = pd.read_parquet(parquet_path)
-            required_cols = {"tarih", "profil", "siparis_no", "adet", "yil", "ay", "kg"}
-
-            if required_cols.issubset(set(df_fast.columns)):
-                GLOBAL_DF = df_fast
-                GLOBAL_FILE_HASH = file_hash
+            df_fast = pd.read_parquet(parquet_path, engine="pyarrow")
+            required = {"tarih", "profil", "siparis_no", "adet", "yil", "ay", "kg"}
+            if required.issubset(set(df_fast.columns)):
+                GLOBAL_DF, GLOBAL_FILE_HASH = df_fast, file_hash
                 return df_fast
-        except Exception:
+        except:
             pass
 
-    # CACHE VARSA → direkt yükle
-    if os.path.exists(cache_path):
+    # 🚀 2. HEADER/SHEET CACHE
+    meta_cache = os.path.join(CACHE_DIR, f"{file_hash}_meta.json")
+    meta = {}
+    if os.path.exists(meta_cache):
         try:
-            cached = pd.read_pickle(cache_path)
-            required_cols = {"tarih", "profil", "siparis_no", "adet", "yil", "ay", "kg"}
+            with open(meta_cache, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+        except:
+            pass
 
-            if required_cols.issubset(set(cached.columns)):
-                optional_defaults = {
-                    "musteri_siparis_no": "",
-                    "firma_adi": "",
-                    "kg": 0,
-                    "pres": "Bilinmiyor",
-                    "termin": pd.NaT,
-                    "termin_hafta": pd.NA,
-                }
-                for col, default_value in optional_defaults.items():
-                    if col not in cached.columns:
-                        cached[col] = default_value
+    if not meta.get("sheet_name") or meta.get("header_row") is None:
+        with pd.ExcelFile(excel_path, engine="calamine") as xls:
+            sheet_name = xls.sheet_names[0]
+        header_row = detect_header_row(excel_path, sheet_name)
+        meta = {"sheet_name": sheet_name, "header_row": header_row}
+        with open(meta_cache, "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False)
+    
+    sheet_name, header_row = meta["sheet_name"], meta["header_row"]
+    pickle_path = os.path.join(CACHE_DIR, f"{file_hash}_{sheet_name}.pkl")
 
-                GLOBAL_DF = cached
-                GLOBAL_FILE_HASH = file_hash
+    # 🚀 3. PICKLE CACHE
+    if os.path.exists(pickle_path):
+        try:
+            cached = pd.read_pickle(pickle_path)
+            required = {"tarih", "profil", "siparis_no", "adet", "yil", "ay", "kg"}
+            if required.issubset(set(cached.columns)):
+                for col, default in {"musteri_siparis_no":"", "firma_adi":"", "kg":0, "pres":"Bilinmiyor", "termin":pd.NaT, "termin_hafta":pd.NA}.items():
+                    if col not in cached: cached[col] = default
+                GLOBAL_DF, GLOBAL_FILE_HASH = cached, file_hash
                 return cached
+        except:
+            try: os.remove(pickle_path)
+            except: pass
 
-        except Exception:
-            pass
-
-        try:
-            os.remove(cache_path)
-        except Exception:
-            pass
-
+    # 🚀 4. EXCEL OKUMA - usecols + calamine
     try:
-        df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
+        preview = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row, nrows=100, engine="calamine")
+        preview = preview.dropna(axis=1, how="all").dropna(how="all").copy()
     except Exception as e:
         raise ValueError(f"Excel okunamadı: {str(e)}")
 
-    df = df.dropna(axis=1, how="all").dropna(how="all").copy()
-
-    tarih_col = find_column_smart(df, "tarih")
-    profil_col = find_column_smart(df, "profil")
-    siparis_col = find_column_smart(df, "siparis_no")
-    adet_col = find_column_smart(df, "adet")
-    kg_col = find_column_smart(df, "kg")
-    musteri_col = find_column_smart(df, "musteri")
-    firma_col = find_column_smart(df, "firma")
-    pres_col = find_column_smart(df, "pres")
-    termin_col = find_column_smart(df, "termin")
-    termin_hafta_col = find_column_smart(df, "termin_hafta")
-
-    missing = [
-        name for name, col in {
-            "Tarih": tarih_col,
-            "Profil": profil_col,
-            "Sipariş": siparis_col,
-            "Adet": adet_col,
-        }.items() if col is None
-    ]
+    # Kolon eşleştirme
+    cols_map = {
+        "tarih": find_column_smart(preview, "tarih"),
+        "profil": find_column_smart(preview, "profil"),
+        "siparis_no": find_column_smart(preview, "siparis_no"),
+        "adet": find_column_smart(preview, "adet"),
+        "kg": find_column_smart(preview, "kg"),
+        "musteri": find_column_smart(preview, "musteri"),
+        "firma": find_column_smart(preview, "firma"),
+        "pres": find_column_smart(preview, "pres"),
+        "termin": find_column_smart(preview, "termin"),
+        "termin_hafta": find_column_smart(preview, "termin_hafta"),
+    }
+    
+    missing = [k for k,v in cols_map.items() if v is None and k in ["tarih","profil","siparis_no","adet"]]
     if missing:
         raise ValueError(f"Gerekli kolonlar bulunamadı: {', '.join(missing)}")
 
+    # Sadece gerekli kolonları oku
+    usecols = [v for v in cols_map.values() if v]
+    df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row, usecols=usecols, engine="calamine")
+    df = df.dropna(axis=1, how="all").dropna(how="all").copy()
+
+    # Veri işleme (kısalmış versiyon)
     work = pd.DataFrame({
-        "tarih": pd.to_datetime(df[tarih_col], errors="coerce", dayfirst=True),
-        "profil": df[profil_col].fillna("").astype(str).str.strip(),
-        "siparis_no": df[siparis_col].fillna("").astype(str).str.strip(),
-        "adet": pd.to_numeric(df[adet_col], errors="coerce"),
+        "tarih": pd.to_datetime(df[cols_map["tarih"]], errors="coerce", dayfirst=True),
+        "profil": df[cols_map["profil"]].fillna("").astype(str).str.strip(),
+        "siparis_no": df[cols_map["siparis_no"]].fillna("").astype(str).str.strip(),
+        "adet": pd.to_numeric(df[cols_map["adet"]], errors="coerce"),
+        "musteri_siparis_no": df[cols_map["musteri"]].apply(normalize_musteri_value) if cols_map["musteri"] else "",
+        "firma_adi": df[cols_map["firma"]].fillna("").astype(str).str.strip() if cols_map["firma"] else "",
+        "kg": pd.to_numeric(df[cols_map["kg"]], errors="coerce") if cols_map["kg"] else 0,
+        "pres": df[cols_map["pres"]].fillna("").astype(str).str.strip().replace("", "Bilinmiyor") if cols_map["pres"] else "Bilinmiyor",
+        "termin": pd.to_datetime(df[cols_map["termin"]], errors="coerce", dayfirst=True) if cols_map["termin"] else pd.NaT,
+        "termin_hafta": pd.to_numeric(df[cols_map["termin_hafta"]], errors="coerce") if cols_map["termin_hafta"] else None,
     })
-
-    if musteri_col:
-        work["musteri_siparis_no"] = df[musteri_col].apply(normalize_musteri_value)
-    else:
-        work["musteri_siparis_no"] = ""
-
-    if firma_col:
-        work["firma_adi"] = df[firma_col].fillna("").astype(str).str.strip()
-    else:
-        work["firma_adi"] = ""
-
-    if kg_col:
-        work["kg"] = pd.to_numeric(df[kg_col], errors="coerce")
-    else:
-        work["kg"] = 0
-
-    if pres_col:
-        work["pres"] = df[pres_col].fillna("").astype(str).str.strip()
-        work["pres"] = work["pres"].replace("", "Bilinmiyor")
-    else:
-        work["pres"] = "Bilinmiyor"
-
-    if termin_col:
-        work["termin"] = pd.to_datetime(df[termin_col], errors="coerce", dayfirst=True)
-    else:
-        work["termin"] = pd.NaT
-
-    if termin_hafta_col:
-        work["termin_hafta"] = pd.to_numeric(df[termin_hafta_col], errors="coerce")
-    else:
-        work["termin_hafta"] = None
 
     work = work.dropna(subset=["tarih", "adet"]).copy()
     work = work[
@@ -369,18 +335,14 @@ def load_excel(excel_file) -> pd.DataFrame:
     work["yil"] = work["tarih"].dt.year.astype(int)
     work["ay"] = work["tarih"].dt.to_period("M").astype(str)
 
+    # 🚀 CACHE YAZ
     try:
-        work.to_pickle(cache_path)
-    except Exception:
+        work.to_pickle(pickle_path)
+        work.to_parquet(parquet_path, index=False, engine="pyarrow")
+    except:
         pass
 
-    try:
-        work.to_parquet(parquet_path, index=False)
-    except Exception:
-        pass
-
-    GLOBAL_DF = work
-    GLOBAL_FILE_HASH = file_hash
+    GLOBAL_DF, GLOBAL_FILE_HASH = work, file_hash
     return work
     
 def filter_data(df: pd.DataFrame, secilen_boy: int, mod: str, profil_ara: str = "") -> pd.DataFrame:
@@ -2209,48 +2171,71 @@ def fast_years_from_file(excel_file):
     if excel_file is None:
         raise gr.Error("Lütfen bir Excel dosyası yükleyin.")
 
-    if hasattr(excel_file, "name") and os.path.exists(excel_file.name):
-        excel_path = excel_file.name
-    else:
-        excel_path = str(excel_file)
-        if not os.path.exists(excel_path):
-            raise gr.Error("Dosya yolu alınamadı.")
+    excel_path = excel_file.name if hasattr(excel_file, "name") and os.path.exists(excel_file.name) else str(excel_file)
+    if not os.path.exists(excel_path):
+        raise gr.Error("Dosya yolu alınamadı.")
 
     stat = os.stat(excel_path)
-    file_hash = hashlib.md5(
-        f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
-    ).hexdigest()
-    try:
-        with pd.ExcelFile(excel_path) as xls:
-            sheet_name = xls.sheet_names[0]
-        header_row = detect_header_row(excel_path, sheet_name)
-    except Exception as e:
-        raise gr.Error(f"Excel okunamadı: {str(e)}")
+    file_hash = hashlib.md5(f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")).hexdigest()
     
-    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}_{sheet_name}.parquet")
-
-    try:
-        if os.path.exists(parquet_path):
-            df = pd.read_parquet(parquet_path, columns=["tarih"])
-            years = sorted(df["tarih"].dropna().dt.year.astype(int).unique().tolist())
+    # 🚀 1. ÖNCE PARQUET CACHE - SADECE TARİH KOLONU
+    parquet_years_path = os.path.join(CACHE_DIR, f"{file_hash}_years.parquet")
+    if os.path.exists(parquet_years_path):
+        try:
+            df_years = pd.read_parquet(parquet_years_path, columns=["tarih"], engine="pyarrow")
+            years = sorted(df_years["tarih"].dropna().dt.year.astype(int).unique().tolist())
             return gr.update(choices=years, value=years)
-    except Exception:
-        pass
+        except:
+            pass
 
+    # 🚀 2. HEADER CACHE KONTROLÜ
+    header_cache = os.path.join(CACHE_DIR, f"{file_hash}_meta.json")
+    meta = {}
+    if os.path.exists(header_cache):
+        try:
+            with open(header_cache, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+        except:
+            pass
+
+    if not meta.get("sheet_name") or meta.get("header_row") is None:
+        try:
+            with pd.ExcelFile(excel_path, engine="calamine") as xls:
+                sheet_name = xls.sheet_names[0]
+            header_row = detect_header_row(excel_path, sheet_name)
+            meta = {"sheet_name": sheet_name, "header_row": header_row}
+            with open(header_cache, "w", encoding="utf-8") as f:
+                json.dump(meta, f, ensure_ascii=False)
+        except Exception as e:
+            raise gr.Error(f"Excel okunamadı: {str(e)}")
+    
+    sheet_name, header_row = meta["sheet_name"], meta["header_row"]
+
+    # 🚀 3. SADECE TARİH KOLONUNU BUL VE OKU
     try:
-        raw_df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
+        preview = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row, nrows=50, engine="calamine")
+        preview = preview.dropna(axis=1, how="all")
+        tarih_col = find_column_smart(preview, "tarih")
+        if not tarih_col:
+            raise gr.Error("Tarih kolonu bulunamadı")
+        
+        # Sadece tarih kolonunu oku
+        raw_df = pd.read_excel(
+            excel_path, sheet_name=sheet_name, header=header_row,
+            usecols=[tarih_col], engine="calamine"
+        )
+        raw_df["tarih"] = pd.to_datetime(raw_df[tarih_col], errors="coerce", dayfirst=True)
+        years = sorted(raw_df["tarih"].dropna().dt.year.astype(int).unique().tolist())
+        
+        # Cache'e yaz
+        try:
+            raw_df[["tarih"]].to_parquet(parquet_years_path, index=False, engine="pyarrow")
+        except:
+            pass
+            
+        return gr.update(choices=years, value=years)
     except Exception as e:
-        raise gr.Error(f"Excel okunamadı: {str(e)}")
-    
-    raw_df = raw_df.dropna(axis=1, how="all").dropna(how="all").copy()
-    tarih_col = find_column_smart(raw_df, "tarih")
-    
-    if tarih_col is None:
-        raise gr.Error("Tarih kolonu bulunamadı (header kontrol et)")
-    
-    raw_df["tarih"] = pd.to_datetime(raw_df[tarih_col], errors="coerce", dayfirst=True)
-    years = sorted(raw_df["tarih"].dropna().dt.year.astype(int).unique().tolist())
-    return gr.update(choices=years, value=years)
+        raise gr.Error(f"Tarih okunamadı: {str(e)}")
     
 def remove_emojis_for_pdf(text: str) -> str:
     if not text:
