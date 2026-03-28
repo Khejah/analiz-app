@@ -2129,27 +2129,97 @@ def years_from_file(excel_file):
     df = load_excel(excel_file)
     years = sorted(df["yil"].unique().tolist())
     return gr.update(choices=years, value=years)
+    
+def remove_emojis_for_pdf(text: str) -> str:
+    if not text:
+        return ""
+    text = str(text)
 
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F300-\U0001F5FF"
+        "\U0001F600-\U0001F64F"
+        "\U0001F680-\U0001F6FF"
+        "\U0001F700-\U0001F77F"
+        "\U0001F780-\U0001F7FF"
+        "\U0001F800-\U0001F8FF"
+        "\U0001F900-\U0001F9FF"
+        "\U0001FA00-\U0001FA6F"
+        "\U0001FA70-\U0001FAFF"
+        "\u2600-\u26FF"
+        "\u2700-\u27BF"
+        "]+",
+        flags=re.UNICODE
+    )
+    return emoji_pattern.sub("", text)
+
+
+def escape_pdf_text(text: str) -> str:
+    if not text:
+        return ""
+    text = str(text)
+    text = text.replace("&", "&amp;")
+    text = text.replace("<", "&lt;")
+    text = text.replace(">", "&gt;")
+    return text
+    
 # PDF KODLARININ BAŞLANĞIÇ YERİ AŞAĞISI
 def clean_markdown_for_pdf(text: str) -> str:
     if not text:
         return ""
-    text = str(text)
-    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
-    text = text.replace("**", "").replace("__", "")
-    text = text.replace("`", "")
-    text = text.replace("•", "-")
-    text = re.sub(r"^[-*]\s*", "• ", text, flags=re.MULTILINE)
-    text = text.replace("\n", "<br/>")
-    return text
 
+    text = remove_emojis_for_pdf(text)
+    text = escape_pdf_text(text)
+
+    lines = text.splitlines()
+    cleaned_lines = []
+
+    for line in lines:
+        raw = line.strip()
+
+        if not raw:
+            cleaned_lines.append("<br/>")
+            continue
+
+        raw = raw.replace("**", "")
+        raw = raw.replace("__", "")
+        raw = raw.replace("`", "")
+
+        raw = re.sub(r"^###\s*", "", raw)
+        raw = re.sub(r"^##\s*", "", raw)
+        raw = re.sub(r"^#\s*", "", raw)
+
+        raw = re.sub(r"^[-*]\s+", "• ", raw)
+        raw = raw.replace("→", "-")
+        raw = raw.replace("✔", "-")
+        raw = raw.replace("❌", "")
+        raw = raw.replace("⚠️", "")
+        raw = raw.replace("⚠", "")
+        raw = raw.replace("✅", "")
+        raw = raw.replace("📌", "")
+        raw = raw.replace("📦", "")
+        raw = raw.replace("📊", "")
+        raw = raw.replace("📈", "")
+        raw = raw.replace("🎯", "")
+        raw = raw.replace("🔍", "")
+        raw = raw.replace("🔩", "")
+        raw = raw.replace("🚀", "")
+        raw = raw.replace("🟢", "")
+        raw = raw.replace("🟡", "")
+        raw = raw.replace("🔴", "")
+        raw = raw.replace("ℹ️", "")
+        raw = raw.replace("📎", "")
+
+        cleaned_lines.append(raw)
+
+    return "<br/>".join(cleaned_lines)
 
 def export_plotly_figure(fig, filename: str) -> str:
     if fig is None:
         return ""
     path = os.path.join(REPORT_DIR, filename)
     try:
-        fig.write_image(path, width=1400, height=800, scale=2)
+        fig.write_image(path, width=1200, height=700, scale=3)
         return path
     except Exception:
         return ""
@@ -2206,34 +2276,69 @@ def build_pdf_styles():
             leading=11,
             textColor=colors.HexColor("#64748B"),
         ),
+        "table_cell": ParagraphStyle(
+            "ReportTableCell",
+            parent=styles["BodyText"],
+            fontName="DejaVu",
+            fontSize=7,
+            leading=9,
+            textColor=colors.HexColor("#111827"),
+            alignment=TA_LEFT,
+            wordWrap="CJK",
+        ),
     }
 
-
 def dataframe_to_pdf_table(df: pd.DataFrame, max_rows: int = 20, col_widths=None):
+    styles = build_pdf_styles()
+
     if df is None or df.empty:
-        data = [["Bilgi", "Kayıt bulunamadı"]]
+        raw_data = [["Bilgi", "Kayıt bulunamadı"]]
     else:
         limited = df.head(max_rows).copy()
-        data = [list(limited.columns)] + limited.fillna("").astype(str).values.tolist()
+        limited = limited.fillna("")
 
-    table = Table(data, repeatRows=1, colWidths=col_widths)
+        for col in limited.columns:
+            if pd.api.types.is_datetime64_any_dtype(limited[col]):
+                limited[col] = limited[col].astype(str)
+
+        raw_data = [list(limited.columns)] + limited.astype(str).values.tolist()
+
+    wrapped_data = []
+    for row_index, row in enumerate(raw_data):
+        wrapped_row = []
+        for cell in row:
+            cell_text = remove_emojis_for_pdf(str(cell))
+            cell_text = escape_pdf_text(cell_text)
+
+            if row_index == 0:
+                wrapped_row.append(Paragraph(f"<b>{cell_text}</b>", styles["table_cell"]))
+            else:
+                wrapped_row.append(Paragraph(cell_text, styles["table_cell"]))
+        wrapped_data.append(wrapped_row)
+
+    if col_widths is None:
+        usable_width = 180 * mm
+        col_count = max(len(raw_data[0]), 1)
+        col_widths = [usable_width / col_count] * col_count
+
+    table = Table(wrapped_data, repeatRows=1, colWidths=col_widths)
+
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "DejaVu-Bold"),
         ("FONTNAME", (0, 1), (-1, -1), "DejaVu"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("LEADING", (0, 0), (-1, -1), 10),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ("LEADING", (0, 0), (-1, -1), 9),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.HexColor("#F8FAFC")]),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
     return table
-
 
 def add_pdf_header_footer(canvas, doc):
     canvas.saveState()
@@ -2362,11 +2467,11 @@ def generate_professional_pdf(
         col_widths=[55 * mm, 110 * mm]
     ))
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph(clean_markdown_for_pdf(exec_summary), styles["body"]))
+    elements.append(Paragraph(clean_markdown_for_pdf(exec_summary).strip(), styles["body"]))
     elements.append(PageBreak())
 
     elements.append(Paragraph("1. Yönetici Özeti", styles["section"]))
-    elements.append(Paragraph(clean_markdown_for_pdf(exec_summary), styles["body"]))
+    elements.append(Paragraph(clean_markdown_for_pdf(exec_summary).strip(), styles["body"]))
 
     elements.append(Spacer(1, 6))
     elements.append(Paragraph("2. KPI Özeti", styles["section"]))
@@ -2387,7 +2492,11 @@ def generate_professional_pdf(
 
     elements.append(Paragraph("5. ABC Analizi ve Stok Önerisi", styles["section"]))
     elements.append(Paragraph(clean_markdown_for_pdf(abc_md), styles["body"]))
-    elements.append(dataframe_to_pdf_table(abc_df, max_rows=15))
+    elements.append(dataframe_to_pdf_table(
+        abc_df,
+        max_rows=15,
+        col_widths=[24*mm, 20*mm, 18*mm, 18*mm, 20*mm, 20*mm, 18*mm, 12*mm, 18*mm]
+    ))
 
     elements.append(Spacer(1, 8))
     elements.append(Paragraph("6. Senaryo Özeti", styles["section"]))
@@ -2400,7 +2509,11 @@ def generate_professional_pdf(
 
     elements.append(Spacer(1, 8))
     elements.append(Paragraph("7. Kritik Profil Özeti", styles["section"]))
-    elements.append(dataframe_to_pdf_table(profile_df, max_rows=15))
+    elements.append(dataframe_to_pdf_table(
+        profile_df,
+        max_rows=15,
+        col_widths=[24*mm, 16*mm, 16*mm, 18*mm, 22*mm, 22*mm, 18*mm, 18*mm, 18*mm]
+    ))
     elements.append(PageBreak())
 
     elements.append(Paragraph("8. Grafikler", styles["section"]))
@@ -2415,18 +2528,26 @@ def generate_professional_pdf(
     for title, path in zip(chart_titles, chart_paths):
         if path and os.path.exists(path):
             elements.append(Paragraph(title, styles["section"]))
-            elements.append(Image(path, width=175 * mm, height=95 * mm))
+            elements.append(Image(path, width=170 * mm, height=90 * mm))
             elements.append(Spacer(1, 8))
 
     elements.append(PageBreak())
     elements.append(Paragraph("9. Dashboard Tabloları", styles["section"]))
 
     elements.append(Paragraph("Aylık Dashboard Verisi", styles["section"]))
-    elements.append(dataframe_to_pdf_table(dashboard_monthly_df, max_rows=18))
+    elements.append(dataframe_to_pdf_table(
+        dashboard_monthly_df,
+        max_rows=18,
+        col_widths=[30*mm, 35*mm, 40*mm, 30*mm]
+    ))
 
     elements.append(Spacer(1, 8))
     elements.append(Paragraph("Top Profil Listesi", styles["section"]))
-    elements.append(dataframe_to_pdf_table(dashboard_top_profiles_df, max_rows=15))
+    elements.append(dataframe_to_pdf_table(
+        dashboard_top_profiles_df,
+        max_rows=15,
+        col_widths=[45*mm, 35*mm, 35*mm, 25*mm]
+    ))
 
     elements.append(Spacer(1, 8))
     elements.append(Paragraph("Termin Özeti", styles["section"]))
@@ -2438,7 +2559,11 @@ def generate_professional_pdf(
 
     elements.append(Spacer(1, 8))
     elements.append(Paragraph("Forecast Özeti", styles["section"]))
-    elements.append(dataframe_to_pdf_table(forecast_df, max_rows=15))
+    elements.append(dataframe_to_pdf_table(
+        forecast_df,
+        max_rows=15,
+        col_widths=[28*mm, 32*mm, 38*mm, 30*mm]
+    ))
 
     elements.append(Spacer(1, 8))
     elements.append(Paragraph("Not", styles["section"]))
