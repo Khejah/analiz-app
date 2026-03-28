@@ -1948,6 +1948,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     try:
         df = load_excel(excel_file)
         # 🚀 ANALİZ CACHE
+        excel_signature = get_excel_signature(excel_file)
+
         analysis_key = stable_hash([
             excel_signature,
             secilen_boy,
@@ -1958,9 +1960,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
             top_n_sec,
             hedef_kucuk_oran,
         ])
-        
         analysis_cache_path = os.path.join(CACHE_DIR, f"analysis_{analysis_key}.pkl")
-        excel_signature = get_excel_signature(excel_file)
         
         if os.path.exists(analysis_cache_path):
             try:
@@ -2131,14 +2131,12 @@ def fast_years_from_file(excel_file):
         if not os.path.exists(excel_path):
             raise gr.Error("Dosya yolu alınamadı.")
 
-    # file signature (senin sistemle uyumlu)
     stat = os.stat(excel_path)
     file_hash = hashlib.md5(
         f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
     ).hexdigest()
     parquet_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
 
-    # 🚀 1. önce parquet dene (EN HIZLI)
     try:
         if os.path.exists(parquet_path):
             df = pd.read_parquet(parquet_path, columns=["tarih"])
@@ -2147,23 +2145,20 @@ def fast_years_from_file(excel_file):
     except Exception:
         pass
 
-    # 🧠 2. Excel'den güvenli şekilde oku
     try:
-        df = pd.read_excel(excel_path)
+        xls = pd.ExcelFile(excel_path)
+        sheet_name = xls.sheet_names[0]
+        header_row = detect_header_row(excel_path, sheet_name=sheet_name)
+        df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
     except Exception as e:
         raise gr.Error(f"Excel okunamadı: {str(e)}")
 
-    # 🔥 kolonları normalize et
-    df.columns = [str(col).strip().lower() for col in df.columns]
-
-    # tarih kolonunu bul
-    if "tarih" not in df.columns:
+    tarih_col = find_column(df, "tarih")
+    if tarih_col is None:
         raise gr.Error("Tarih kolonu bulunamadı (header kontrol et)")
 
-    df["tarih"] = pd.to_datetime(df["tarih"], errors="coerce", dayfirst=True)
-
+    df["tarih"] = pd.to_datetime(df[tarih_col], errors="coerce", dayfirst=True)
     years = sorted(df["tarih"].dropna().dt.year.astype(int).unique().tolist())
-
     return gr.update(choices=years, value=years)
     
 def remove_emojis_for_pdf(text: str) -> str:
