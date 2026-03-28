@@ -1,6 +1,4 @@
-print("🚀 VERSION: KAPTAN-SERDAR-KODDER-V1.2")
-print("HEADER ROW (LOAD):", header_row)
-print("COLUMNS:", df.columns.tolist())
+#Captain Serdar Kodder v1.2
 
 from typing import Iterable, Optional
 
