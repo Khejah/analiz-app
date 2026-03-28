@@ -32,6 +32,9 @@ from reportlab.platypus import (
     PageBreak,
 )
 
+GLOBAL_DF = None
+GLOBAL_FILE_HASH = None
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAPPING_FILE = os.path.join(BASE_DIR, "musteri_mapping.json")
 CACHE_DIR = os.path.join(BASE_DIR, "cache_data")
@@ -143,24 +146,6 @@ def find_column_smart(df, target):
 
     return None
 
-def detect_header_row(excel_path, max_rows=10):
-    preview = pd.read_excel(excel_path, header=None, nrows=max_rows)
-
-    aliases = [normalize_text(a) for a in COLUMN_ALIASES_PRO["tarih"]]
-
-    for i, row in preview.iterrows():
-        row_values = [normalize_text(x) for x in row.tolist()]
-
-        hits = sum(
-            any(alias in val for alias in aliases)
-            for val in row_values
-        )
-
-        if hits > 0:
-            return i
-
-    return 0
-
 def load_customer_mapping():
     if not os.path.exists(MAPPING_FILE):
         return {}
@@ -211,6 +196,8 @@ def get_customer_group_list(mapping: dict, ana_musteri: str):
     return benzersiz
     
 def load_excel(excel_file) -> pd.DataFrame:
+    global GLOBAL_DF, GLOBAL_FILE_HASH
+
     if excel_file is None:
         raise ValueError("Lütfen bir Excel dosyası yükleyin.")
 
@@ -225,16 +212,28 @@ def load_excel(excel_file) -> pd.DataFrame:
     file_hash = hashlib.md5(
         f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
     ).hexdigest()
-    cache_path = os.path.join(CACHE_DIR, f"{file_hash}.pkl")
-    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
+
+    if GLOBAL_DF is not None and GLOBAL_FILE_HASH == file_hash:
+        return GLOBAL_DF
+
+    try:
+        with pd.ExcelFile(excel_path) as xls:
+            sheet_name = xls.sheet_names[0]
+    except Exception as e:
+        raise ValueError(f"Excel okunamadı: {str(e)}")
+    
+    cache_path = os.path.join(CACHE_DIR, f"{file_hash}_{sheet_name}.pkl")
+    parquet_path = os.path.join(CACHE_DIR, f"{file_hash}_{sheet_name}.parquet")
 
     # 🚀 ULTRA FAST PARQUET CACHE
     if os.path.exists(parquet_path):
         try:
             df_fast = pd.read_parquet(parquet_path)
-            required_cols = {"tarih", "profil", "siparis_no", "adet", "yil", "ay"}
-    
+            required_cols = {"tarih", "profil", "siparis_no", "adet", "yil", "ay", "kg"}
+
             if required_cols.issubset(set(df_fast.columns)):
+                GLOBAL_DF = df_fast
+                GLOBAL_FILE_HASH = file_hash
                 return df_fast
         except Exception:
             pass
@@ -243,8 +242,8 @@ def load_excel(excel_file) -> pd.DataFrame:
     if os.path.exists(cache_path):
         try:
             cached = pd.read_pickle(cache_path)
-            required_cols = {"tarih", "profil", "siparis_no", "adet", "yil", "ay"}
-            
+            required_cols = {"tarih", "profil", "siparis_no", "adet", "yil", "ay", "kg"}
+
             if required_cols.issubset(set(cached.columns)):
                 optional_defaults = {
                     "musteri_siparis_no": "",
@@ -257,18 +256,21 @@ def load_excel(excel_file) -> pd.DataFrame:
                 for col, default_value in optional_defaults.items():
                     if col not in cached.columns:
                         cached[col] = default_value
+
+                GLOBAL_DF = cached
+                GLOBAL_FILE_HASH = file_hash
                 return cached
-    
+
         except Exception:
             pass
-    
+
         try:
             os.remove(cache_path)
         except Exception:
             pass
+
     try:
-        header_row = detect_header_row(excel_path)
-        df = pd.read_excel(excel_path, header=header_row)
+        df = pd.read_excel(excel_path, sheet_name=sheet_name)
     except Exception as e:
         raise ValueError(f"Excel okunamadı: {str(e)}")
 
@@ -283,7 +285,7 @@ def load_excel(excel_file) -> pd.DataFrame:
     firma_col = find_column_smart(df, "firma")
     pres_col = find_column_smart(df, "pres")
     termin_col = find_column_smart(df, "termin")
-    termin_hafta_col = find_column_smart(df, "termin_hafta")    
+    termin_hafta_col = find_column_smart(df, "termin_hafta")
 
     missing = [
         name for name, col in {
@@ -307,7 +309,7 @@ def load_excel(excel_file) -> pd.DataFrame:
         work["musteri_siparis_no"] = df[musteri_col].apply(normalize_musteri_value)
     else:
         work["musteri_siparis_no"] = ""
-        
+
     if firma_col:
         work["firma_adi"] = df[firma_col].fillna("").astype(str).str.strip()
     else:
@@ -317,25 +319,23 @@ def load_excel(excel_file) -> pd.DataFrame:
         work["kg"] = pd.to_numeric(df[kg_col], errors="coerce")
     else:
         work["kg"] = 0
-    # PRES
+
     if pres_col:
         work["pres"] = df[pres_col].fillna("").astype(str).str.strip()
         work["pres"] = work["pres"].replace("", "Bilinmiyor")
     else:
         work["pres"] = "Bilinmiyor"
-    
-    # TERMIN
+
     if termin_col:
         work["termin"] = pd.to_datetime(df[termin_col], errors="coerce", dayfirst=True)
     else:
         work["termin"] = pd.NaT
-    
-    # TERMIN HAFTA
+
     if termin_hafta_col:
         work["termin_hafta"] = pd.to_numeric(df[termin_hafta_col], errors="coerce")
     else:
-        work["termin_hafta"] = None    
-        
+        work["termin_hafta"] = None
+
     work = work.dropna(subset=["tarih", "adet"]).copy()
     work = work[
         work["profil"].astype(str).str.strip().ne("") &
@@ -345,21 +345,21 @@ def load_excel(excel_file) -> pd.DataFrame:
     work["adet"] = work["adet"].astype(int)
     work["yil"] = work["tarih"].dt.year.astype(int)
     work["ay"] = work["tarih"].dt.to_period("M").astype(str)
-    
-    # ✅ mevcut cache (dokunma)
+
     try:
         work.to_pickle(cache_path)
     except Exception:
         pass
-    
-    # 🚀 YENİ EKLEDİĞİMİZ (SADECE BU)
+
     try:
         work.to_parquet(parquet_path, index=False)
     except Exception:
         pass
-    
-    return work
 
+    GLOBAL_DF = work
+    GLOBAL_FILE_HASH = file_hash
+    return work
+    
 def filter_data(df: pd.DataFrame, secilen_boy: int, mod: str, profil_ara: str = "") -> pd.DataFrame:
     filtered = df.copy()
 
@@ -419,7 +419,7 @@ def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFram
         farkli_siparis=("siparis_no", pd.Series.nunique),
         farkli_profil=("profil", pd.Series.nunique),
         toplam_boy=("adet", "sum"),
-        toplam_kg=("kg", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
     ).reset_index()
 
     rows = []
@@ -607,7 +607,7 @@ def build_high_volume_year_summary(scope_df: pd.DataFrame, min_boy: int) -> pd.D
         benzersiz_siparis=("siparis_no", pd.Series.nunique),
         benzersiz_profil=("profil", pd.Series.nunique),
         toplam_adet=("adet", "sum"),
-        toplam_kg=("kg", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
     )
     year["toplam_kg"] = year["toplam_kg"].round(2)
     return year.sort_values("yil")
@@ -638,7 +638,7 @@ def build_dashboard_monthly(scope_df: pd.DataFrame) -> pd.DataFrame:
 
     monthly = scope_df.groupby("ay", as_index=False).agg(
         toplam_adet=("adet", "sum"),
-        toplam_kg=("kg", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
         siparis_sayisi=("siparis_no", pd.Series.nunique),
     ).sort_values("ay")
 
@@ -654,7 +654,7 @@ def build_seasonality_table(scope_df: pd.DataFrame) -> pd.DataFrame:
 
     sezon = df.groupby("ay_no", as_index=False).agg(
         toplam_adet=("adet", "sum"),
-        toplam_kg=("kg", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
         siparis_sayisi=("siparis_no", pd.Series.nunique),
     )
 
@@ -744,7 +744,7 @@ def build_dashboard_top_profiles(scope_df: pd.DataFrame, top_n: int = 15) -> pd.
 
     prof = scope_df.groupby("profil", as_index=False).agg(
         toplam_adet=("adet", "sum"),
-        toplam_kg=("kg", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
         siparis_sayisi=("siparis_no", pd.Series.nunique),
     )
 
@@ -1094,7 +1094,7 @@ def build_root_cause(scope_df: pd.DataFrame, secilen_boy: int):
         kucuk["musteri_siparis_no"].astype(str).str.strip().ne("")
     ].copy()
     
-    musteri = kucuk.groupby("musteri_siparis_no").agg(
+    musteri = kucuk_musteri.groupby("musteri_siparis_no").agg(
         siparis=("siparis_no", "count"),
         toplam=("adet", "sum")
     ).sort_values("siparis", ascending=False).head(10)
@@ -1121,7 +1121,7 @@ def build_forecast_table(scope_df: pd.DataFrame) -> pd.DataFrame:
         ])
 
     monthly = scope_df.copy()
-    monthly["ay_dt"] = pd.to_datetime(monthly["ay"])
+    monthly["ay_dt"] = pd.to_datetime(monthly["ay"], format="%Y-%m", errors="coerce")
     
     monthly = monthly.groupby("ay_dt", as_index=False).agg(
         toplam_adet=("adet", "sum")
@@ -1232,10 +1232,11 @@ def scenario_summary_markdown(scope_df: pd.DataFrame, secilen_boy: int, hedef_ku
     agresif_oran = max(1, min(hedef_oran - 3, hedef_oran))
 
     kalip_degisim_sayisi = kucuk.groupby("siparis_no")["profil"].nunique().sum()
-
+    mevcut_kalip_suresi = float(kalip_degisim_sayisi) * (5 / 60)
+    
     def hesapla(oran):
         iyilesme = max(mevcut_oran - oran, 0)
-        kazanc_saat = (iyilesme / 100) * kalip_degisim_sayisi
+        kazanc_saat = (iyilesme / 100) * mevcut_kalip_suresi
         kazanc_gun = kazanc_saat / 24
         return iyilesme, kazanc_saat, kazanc_gun
 
@@ -1542,7 +1543,7 @@ def build_year_summary(filtered: pd.DataFrame) -> pd.DataFrame:
         benzersiz_siparis=("siparis_no", pd.Series.nunique),
         benzersiz_profil=("profil", pd.Series.nunique),
         toplam_adet=("adet", "sum"),
-        toplam_kg=("kg", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
     )
     year["toplam_kg"] = year["toplam_kg"].round(2)
 
@@ -1730,7 +1731,7 @@ def dashboard_pres_performance_chart(scope_df: pd.DataFrame):
 
     pres_df = scope_df.groupby("pres", as_index=False).agg(
         toplam_adet=("adet", "sum"),
-        toplam_kg=("kg", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
         siparis_sayisi=("siparis_no", pd.Series.nunique),
     )
 
@@ -1754,7 +1755,7 @@ def build_pres_efficiency(scope_df: pd.DataFrame) -> pd.DataFrame:
 
     pres_df = scope_df.groupby("pres", as_index=False).agg(
         toplam_adet=("adet", "sum"),
-        toplam_kg=("kg", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
         siparis_sayisi=("siparis_no", pd.Series.nunique),
         satir_sayisi=("siparis_no", "size"),
     )
@@ -1824,7 +1825,8 @@ def dashboard_termin_chart(termin_df: pd.DataFrame):
     return fig
 
 def load_customer_detail(musteri, excel_file, secilen_boy, mod, yillar, profil_ara):
-    df = load_excel(excel_file)
+    global GLOBAL_DF
+    df = GLOBAL_DF if GLOBAL_DF is not None else load_excel(excel_file)
 
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
     scope_df = filter_scope_data(df, selected_years, profil_ara)
@@ -2004,6 +2006,7 @@ def never_exceed_summary_markdown(
 def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran):
     try:
         df = load_excel(excel_file)
+        global GLOBAL_DF
         # 🚀 ANALİZ CACHE
         excel_signature = get_excel_signature(excel_file)
 
@@ -2079,10 +2082,10 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
     raw["tarih"] = raw["tarih"].dt.strftime("%Y-%m-%d")
 
-    profile_list = profile_df[UI_COLS["profil"]].tolist() if not profile_df.empty else []
+    profile_list = profile_df[UI_COLS["profil"]].tolist() if not profile_df.empty else ["-"]
     
     customer_mapping = load_customer_mapping()
-    musteri_list = sorted(customer_mapping.keys())
+    musteri_list = sorted(customer_mapping.keys()) if customer_mapping else ["-"]
     exec_summary = build_executive_summary(
         scope_df,
         abc_df,
@@ -2122,8 +2125,8 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         abc_df,
         abc_chart(abc_df, top_n_value),
     
-        gr.update(choices=profile_list, value=profile_list[0] if profile_list else ""),
-        gr.update(choices=musteri_list, value=musteri_list[0] if musteri_list else ""),
+        gr.update(choices=profile_list, value=profile_list[0]),
+        gr.update(choices=musteri_list, value=musteri_list[0]),
     
         exec_summary,
         dashboard_kpi_df,
@@ -2160,7 +2163,9 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     return result
     
 def load_profile_detail(profil, excel_file, secilen_boy, mod, yillar):
-    df = load_excel(excel_file)
+    global GLOBAL_DF
+    df = GLOBAL_DF if GLOBAL_DF is not None else load_excel(excel_file)
+
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
     filtered = filter_data(df, int(secilen_boy), mod, "")
 
@@ -2203,19 +2208,18 @@ def fast_years_from_file(excel_file):
         pass
 
     try:
-        xls = pd.ExcelFile(excel_path)
-        sheet_name = xls.sheet_names[0]
-        header_row = detect_header_row(excel_path)
-        df = pd.read_excel(excel_path, sheet_name=sheet_name, header=header_row)
+        raw_df = pd.read_excel(excel_path)
     except Exception as e:
         raise gr.Error(f"Excel okunamadı: {str(e)}")
-
-    tarih_col = find_column_smart(df, "tarih")
+    
+    raw_df = raw_df.dropna(axis=1, how="all").dropna(how="all").copy()
+    tarih_col = find_column_smart(raw_df, "tarih")
+    
     if tarih_col is None:
         raise gr.Error("Tarih kolonu bulunamadı (header kontrol et)")
-
-    df["tarih"] = pd.to_datetime(df[tarih_col], errors="coerce", dayfirst=True)
-    years = sorted(df["tarih"].dropna().dt.year.astype(int).unique().tolist())
+    
+    raw_df["tarih"] = pd.to_datetime(raw_df[tarih_col], errors="coerce", dayfirst=True)
+    years = sorted(raw_df["tarih"].dropna().dt.year.astype(int).unique().tolist())
     return gr.update(choices=years, value=years)
     
 def remove_emojis_for_pdf(text: str) -> str:
