@@ -2131,12 +2131,14 @@ def fast_years_from_file(excel_file):
         if not os.path.exists(excel_path):
             raise gr.Error("Dosya yolu alınamadı.")
 
+    # file signature (senin sistemle uyumlu)
     stat = os.stat(excel_path)
     file_hash = hashlib.md5(
         f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
     ).hexdigest()
     parquet_path = os.path.join(CACHE_DIR, f"{file_hash}.parquet")
 
+    # 🚀 1. önce parquet dene (EN HIZLI)
     try:
         if os.path.exists(parquet_path):
             df = pd.read_parquet(parquet_path, columns=["tarih"])
@@ -2145,27 +2147,22 @@ def fast_years_from_file(excel_file):
     except Exception:
         pass
 
+    # 🧠 2. Excel'den güvenli şekilde oku
     try:
-        df = pd.read_excel(excel_path, usecols=["Tarih"])
-    except ValueError:
         df = pd.read_excel(excel_path)
-        tarih_col = None
-        for col in df.columns:
-            if str(col).strip().lower() in ["tarih", "tari̇h"]:
-                tarih_col = col
-                break
-
-        if tarih_col is None:
-            raise gr.Error("Tarih kolonu bulunamadı.")
-
-        df = df[[tarih_col]].copy()
-        df.columns = ["Tarih"]
-
     except Exception as e:
-        raise gr.Error(f"Yıllar yüklenemedi: {str(e)}")
+        raise gr.Error(f"Excel okunamadı: {str(e)}")
 
-    df["Tarih"] = pd.to_datetime(df["Tarih"], errors="coerce", dayfirst=True)
-    years = sorted(df["Tarih"].dt.year.dropna().astype(int).unique().tolist())
+    # 🔥 kolonları normalize et
+    df.columns = [str(col).strip().lower() for col in df.columns]
+
+    # tarih kolonunu bul
+    if "tarih" not in df.columns:
+        raise gr.Error("Tarih kolonu bulunamadı (header kontrol et)")
+
+    df["tarih"] = pd.to_datetime(df["tarih"], errors="coerce", dayfirst=True)
+
+    years = sorted(df["tarih"].dropna().dt.year.astype(int).unique().tolist())
 
     return gr.update(choices=years, value=years)
     
