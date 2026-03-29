@@ -1931,16 +1931,15 @@ def summary_markdown(
     karisik_siparis = int(((siparis_min <= secilen_boy) & (siparis_max > secilen_boy)).sum())
 
     # =========================
-    # 🔩 ÜRETİM DAĞILIMI
+    # 🔩 DAĞILIM ORANLARI (SİPARİŞ BAZLI)
     # =========================
-    toplam_scope_satir = len(scope_df)
-    toplam_scope_adet = int(scope_df["adet"].sum())
-
-    kucuk_satir = len(filtered)
-    kucuk_adet = toplam_adet
-
-    satir_yuzde = (kucuk_satir / toplam_scope_satir * 100) if toplam_scope_satir else 0
-    adet_yuzde = (kucuk_adet / toplam_scope_adet * 100) if toplam_scope_adet else 0
+    kucuk_gecen_toplam = sadece_kucuk_siparis + karisik_siparis
+    buyuk_gecen_toplam = sadece_buyuk_siparis + karisik_siparis
+    
+    sadece_kucuk_siparis_orani = (sadece_kucuk_siparis / toplam_siparis * 100) if toplam_siparis else 0
+    kucuk_gecen_siparis_orani = (kucuk_gecen_toplam / toplam_siparis * 100) if toplam_siparis else 0
+    sadece_buyuk_siparis_orani = (sadece_buyuk_siparis / toplam_siparis * 100) if toplam_siparis else 0
+    buyuk_gecen_siparis_orani = (buyuk_gecen_toplam / toplam_siparis * 100) if toplam_siparis else 0
 
     # =========================
     # 🔧 KALIP ANALİZİ
@@ -1995,9 +1994,12 @@ def summary_markdown(
         f"- 🟡 Hem küçük hem büyük: **{karisik_siparis:,}**",
 
         "",
-        "## 🔩 Üretim Dağılımı",
-        f"- Toplam kayıt içinde küçük siparişlerin payı: **%{satir_yuzde:.1f}**",
-        f"- Toplam üretim içinde küçük siparişlerin payı: **%{adet_yuzde:.1f}**",
+        "## 🔩 Dağılım Oranları",
+        f"- Sadece küçük siparişlerin toplam sipariş içindeki payı: **%{sadece_kucuk_siparis_orani:.1f}**",
+        f"- Küçük geçen siparişlerin toplam sipariş içindeki payı: **%{kucuk_gecen_siparis_orani:.1f}**",
+        f"- Sadece büyük siparişlerin toplam sipariş içindeki payı: **%{sadece_buyuk_siparis_orani:.1f}**",
+        f"- Büyük geçen siparişlerin toplam sipariş içindeki payı: **%{buyuk_gecen_siparis_orani:.1f}**",
+        f"- Toplam üretim içinde küçük siparişlerin üretim payı: **%{adet_yuzde:.1f}**",
 
         "",
         "## 🔧 Kalıp Analizi",
