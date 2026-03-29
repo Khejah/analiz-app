@@ -1900,40 +1900,70 @@ def summary_markdown(
     secilen_boy: int,
     mod: str
 ) -> str:
+
     if filtered.empty:
         return "### Sonuç\nSeçilen filtrelere göre kayıt bulunamadı."
 
-    exact = filtered[filtered["adet"] == secilen_boy]
+    # =========================
+    # 📅 GENEL BİLGİLER
+    # =========================
     yil_min = int(scope_df["yil"].min())
     yil_max = int(scope_df["yil"].max())
 
+    toplam_satir = len(filtered)
+    farkli_siparis = filtered["siparis_no"].nunique()
+    farkli_profil = filtered["profil"].nunique()
+    toplam_adet = int(filtered["adet"].sum())
+    toplam_kg = float(filtered["kg"].fillna(0).sum())
+
+    # =========================
+    # 🔥 SİPARİŞ BAZLI ANALİZ (DOĞRU MODEL)
+    # =========================
+    siparis_group = scope_df.groupby("siparis_no")["adet"]
+
+    siparis_max = siparis_group.max()
+    siparis_min = siparis_group.min()
+
+    toplam_siparis = siparis_max.shape[0]
+
+    sadece_kucuk_siparis = int((siparis_max <= secilen_boy).sum())
+    sadece_buyuk_siparis = int((siparis_min > secilen_boy).sum())
+    karisik_siparis = int(((siparis_min <= secilen_boy) & (siparis_max > secilen_boy)).sum())
+
+    # =========================
+    # 🔩 ÜRETİM DAĞILIMI
+    # =========================
     toplam_scope_satir = len(scope_df)
     toplam_scope_adet = int(scope_df["adet"].sum())
 
     kucuk_satir = len(filtered)
-    kucuk_adet = int(filtered["adet"].sum())
-    # 🔧 KALIP ANALİZİ (KALIP ÇEŞİTLİLİĞİ)
+    kucuk_adet = toplam_adet
+
+    satir_yuzde = (kucuk_satir / toplam_scope_satir * 100) if toplam_scope_satir else 0
+    adet_yuzde = (kucuk_adet / toplam_scope_adet * 100) if toplam_scope_adet else 0
+
+    # =========================
+    # 🔧 KALIP ANALİZİ
+    # =========================
     toplam_kalip = scope_df["profil"].nunique()
     kucuk_kalip = filtered["profil"].nunique()
-    kalip_oran = (kucuk_kalip / toplam_kalip * 100) if toplam_kalip > 0 else 0
+
+    kalip_oran = (kucuk_kalip / toplam_kalip * 100) if toplam_kalip else 0
+
+    # setup süresi (senin mantık: 5 dk)
     toplam_sure_saat = (kucuk_kalip * 5) / 60
-    # 🔍 KALIP KIRILIM ANALİZİ
-    tum_kaliplar = set(scope_df["profil"].unique())
+
+    # kalıp dağılımı (senin mevcut doğru modelin korunarak)
     kucuk_kaliplar = set(filtered["profil"].unique())
-    
-    buyuk_df = scope_df[scope_df["adet"] > secilen_boy]
-    buyuk_kaliplar = set(buyuk_df["profil"].unique())
-    
-    sadece_kucuk = len(kucuk_kaliplar - buyuk_kaliplar)
-    sadece_buyuk = len(buyuk_kaliplar - kucuk_kaliplar)
-    ortak = len(kucuk_kaliplar & buyuk_kaliplar)
-    # KALIP DEĞİŞİM KODU ÜSTTEKİ 11 SATIR
-    buyuk_satir = toplam_scope_satir - kucuk_satir
-    buyuk_adet = toplam_scope_adet - kucuk_adet
+    buyuk_kaliplar = set(scope_df[scope_df["adet"] > secilen_boy]["profil"].unique())
 
-    satir_yuzde = (kucuk_satir / toplam_scope_satir * 100) if toplam_scope_satir > 0 else 0
-    adet_yuzde = (kucuk_adet / toplam_scope_adet * 100) if toplam_scope_adet > 0 else 0
+    sadece_kucuk_kalip = len(kucuk_kaliplar - buyuk_kaliplar)
+    sadece_buyuk_kalip = len(buyuk_kaliplar - kucuk_kaliplar)
+    ortak_kalip = len(kucuk_kaliplar & buyuk_kaliplar)
 
+    # =========================
+    # 🧠 YORUM MOTORU
+    # =========================
     if satir_yuzde > 20 and adet_yuzde < 10:
         yorum = "⚠️ Çok sayıda küçük sipariş var ancak üretime katkısı düşük (verimsizlik riski)"
     elif satir_yuzde > 20:
@@ -1943,49 +1973,61 @@ def summary_markdown(
     else:
         yorum = "✅ Sipariş dağılımı dengeli"
 
+    # =========================
+    # 📝 OUTPUT
+    # =========================
     lines = [
-        "### Özet Bilgi",
+        "## 📊 Özet Bilgi",
         f"- İncelenen sipariş tipi: **{mod}**",
         f"- Küçük sipariş eşiği: **{secilen_boy} boy**",
         f"- İncelenen tarih aralığı: **{yil_min} - {yil_max}**",
-        f"- Toplam kayıt sayısı: **{len(filtered):,}**",
-        f"- Farklı sipariş sayısı: **{filtered['siparis_no'].nunique():,}**",
-        f"- Farklı profil kodu sayısı: **{filtered['profil'].nunique():,}**",
-        f"- Toplam üretilen boy: **{int(filtered['adet'].sum()):,}**",
-        f"- Toplam ağırlık: **{filtered['kg'].fillna(0).sum():,.2f} kg**",
+        f"- Toplam kayıt sayısı (Satır sayısı): **{toplam_satir:,}**",
+        f"- Farklı sipariş sayısı (Farklı Sipariş No): **{farkli_siparis:,}**",
+        f"- Farklı profil sayısı: **{farkli_profil:,}**",
+        f"- Toplam üretilen boy: **{toplam_adet:,}**",
+        f"- Toplam ağırlık: **{toplam_kg:,.2f} kg**",
+
         "",
-        "### Genel Yük Değerlendirmesi",
+        "## 📦 Sipariş Dağılımı (Sipariş Bazlı)",
+        f"- Toplam sipariş: **{toplam_siparis:,}**",
+        f"- 🔴 Sadece küçük sipariş: **{sadece_kucuk_siparis:,}**",
+        f"- 🟢 Sadece büyük sipariş: **{sadece_buyuk_siparis:,}**",
+        f"- 🟡 Hem küçük hem büyük: **{karisik_siparis:,}**",
+
         "",
-        "### 📦 Sipariş Dağılımı",
-        f"- Toplam sipariş: **{toplam_scope_satir:,}**",
-        f"  - Küçük sipariş (≤{secilen_boy}): **{kucuk_satir:,}**",
-        f"  - Büyük sipariş (>{secilen_boy}): **{buyuk_satir:,}**",
-        "",
-        "### 🔩 Üretim Dağılımı",
+        "## 🔩 Üretim Dağılımı",
         f"- Toplam kayıt içinde küçük siparişlerin payı: **%{satir_yuzde:.1f}**",
         f"- Toplam üretim içinde küçük siparişlerin payı: **%{adet_yuzde:.1f}**",
+
         "",
-        "### 🔧 Kalıp Analizi",
+        "## 🔧 Kalıp Analizi",
         f"- Toplam kalıp sayısı: **{toplam_kalip:,}**",
         f"- {secilen_boy} boy altı kalıp sayısı: **{kucuk_kalip:,}**",
         f"- Oranı: **%{kalip_oran:.1f}**",
         f"- Tahmini setup süresi: **{toplam_sure_saat:.1f} saat**",
+
         "",
-        "### 📊 Kalıp Kullanım Dağılımı",
-        f"- 🔴 Sadece küçük sipariş: **{sadece_kucuk:,}**",
-        f"- 🟢 Sadece büyük sipariş: **{sadece_buyuk:,}**",
-        f"- 🟡 Her iki sipariş türü: **{ortak:,}**",
+        "## 📊 Kalıp Kullanım Dağılımı",
+        f"- 🔴 Sadece küçük sipariş: **{sadece_kucuk_kalip:,}**",
+        f"- 🟢 Sadece büyük sipariş: **{sadece_buyuk_kalip:,}**",
+        f"- 🟡 Her iki sipariş türü: **{ortak_kalip:,}**",
+
         "",
-        "### Genel Yorum Değerlendirme:",
-        f"- Yorum: **{yorum}**",
+        "## 🧠 Genel Yorum",
+        f"- {yorum}",
     ]
 
+    # =========================
+    # 🎯 TAM BOY ANALİZİ
+    # =========================
     if mod == "Seçilen boy ve altı":
+        exact = filtered[filtered["adet"] == secilen_boy]
+
         lines += [
             "",
             f"**Tam {secilen_boy} boy olanlar**",
-            f"- Sipariş sayısı: **{len(exact):,}**",
-            f"- Sipariş no sayısı: **{exact['siparis_no'].nunique():,}**",
+            f"- Satır sayısı: **{len(exact):,}**",
+            f"- Sipariş sayısı: **{exact['siparis_no'].nunique():,}**",
             f"- Profil sayısı: **{exact['profil'].nunique():,}**",
             f"- Toplam adet: **{int(exact['adet'].sum()):,}**",
         ]
