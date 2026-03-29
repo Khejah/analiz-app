@@ -1917,29 +1917,41 @@ def summary_markdown(
     toplam_kg = float(filtered["kg"].fillna(0).sum())
 
     # =========================
-    # 🔥 SİPARİŞ BAZLI ANALİZ (DOĞRU MODEL)
+    # 🔥 SİPARİŞ BAZLI ANALİZ
     # =========================
     siparis_group = scope_df.groupby("siparis_no")["adet"]
 
     siparis_max = siparis_group.max()
     siparis_min = siparis_group.min()
 
-    toplam_siparis = siparis_max.shape[0]
+    toplam_siparis = int(siparis_max.shape[0])
 
     sadece_kucuk_siparis = int((siparis_max <= secilen_boy).sum())
     sadece_buyuk_siparis = int((siparis_min > secilen_boy).sum())
     karisik_siparis = int(((siparis_min <= secilen_boy) & (siparis_max > secilen_boy)).sum())
 
     # =========================
-    # 🔩 DAĞILIM ORANLARI (SİPARİŞ BAZLI)
+    # 🔩 DAĞILIM ORANLARI
     # =========================
     kucuk_gecen_toplam = sadece_kucuk_siparis + karisik_siparis
     buyuk_gecen_toplam = sadece_buyuk_siparis + karisik_siparis
-    
+
     sadece_kucuk_siparis_orani = (sadece_kucuk_siparis / toplam_siparis * 100) if toplam_siparis else 0
     kucuk_gecen_siparis_orani = (kucuk_gecen_toplam / toplam_siparis * 100) if toplam_siparis else 0
     sadece_buyuk_siparis_orani = (sadece_buyuk_siparis / toplam_siparis * 100) if toplam_siparis else 0
     buyuk_gecen_siparis_orani = (buyuk_gecen_toplam / toplam_siparis * 100) if toplam_siparis else 0
+
+    # =========================
+    # 🔩 SATIR / ÜRETİM PAYI
+    # =========================
+    toplam_scope_satir = len(scope_df)
+    toplam_scope_adet = int(scope_df["adet"].sum())
+
+    kucuk_satir = len(filtered)
+    kucuk_adet = int(filtered["adet"].sum())
+
+    satir_yuzde = (kucuk_satir / toplam_scope_satir * 100) if toplam_scope_satir else 0
+    adet_yuzde = (kucuk_adet / toplam_scope_adet * 100) if toplam_scope_adet else 0
 
     # =========================
     # 🔧 KALIP ANALİZİ
@@ -1948,11 +1960,8 @@ def summary_markdown(
     kucuk_kalip = filtered["profil"].nunique()
 
     kalip_oran = (kucuk_kalip / toplam_kalip * 100) if toplam_kalip else 0
-
-    # setup süresi (senin mantık: 5 dk)
     toplam_sure_saat = (kucuk_kalip * 5) / 60
 
-    # kalıp dağılımı (senin mevcut doğru modelin korunarak)
     kucuk_kaliplar = set(filtered["profil"].unique())
     buyuk_kaliplar = set(scope_df[scope_df["adet"] > secilen_boy]["profil"].unique())
 
@@ -1999,7 +2008,8 @@ def summary_markdown(
         f"- Küçük geçen siparişlerin toplam sipariş içindeki payı: **%{kucuk_gecen_siparis_orani:.1f}**",
         f"- Sadece büyük siparişlerin toplam sipariş içindeki payı: **%{sadece_buyuk_siparis_orani:.1f}**",
         f"- Büyük geçen siparişlerin toplam sipariş içindeki payı: **%{buyuk_gecen_siparis_orani:.1f}**",
-        f"- Toplam üretim içinde küçük siparişlerin üretim payı: **%{adet_yuzde:.1f}**",
+        f"- Toplam kayıt içinde küçük siparişlerin payı: **%{satir_yuzde:.1f}**",
+        f"- Toplam üretim içinde küçük siparişlerin payı: **%{adet_yuzde:.1f}**",
 
         "",
         "## 🔧 Kalıp Analizi",
@@ -2019,9 +2029,6 @@ def summary_markdown(
         f"- {yorum}",
     ]
 
-    # =========================
-    # 🎯 TAM BOY ANALİZİ
-    # =========================
     if mod == "Seçilen boy ve altı":
         exact = filtered[filtered["adet"] == secilen_boy]
 
