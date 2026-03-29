@@ -36,9 +36,20 @@ GLOBAL_DF = None
 GLOBAL_FILE_HASH = None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IS_RENDER = os.environ.get("RENDER") is not None
+if IS_RENDER:
+    CACHE_DIR = "/tmp/cache_data"
+    REPORT_DIR = "/tmp/generated_reports"
+else:
+    CACHE_DIR = os.path.join(BASE_DIR, "cache_data")
+    REPORT_DIR = os.path.join(BASE_DIR, "generated_reports")
 MAPPING_FILE = os.path.join(BASE_DIR, "musteri_mapping.json")
-CACHE_DIR = os.path.join(BASE_DIR, "cache_data")
-REPORT_DIR = os.path.join(BASE_DIR, "generated_reports")
+SEASON_PROFILES = [
+    "15-302517-07",
+    "15-302517-08",
+    "15-302517-10",
+]
+SEASON_PROFILE_ALL_LABEL = "TÜMÜ (3 Profil Toplam)"
 os.makedirs(CACHE_DIR, exist_ok=True)
 os.makedirs(REPORT_DIR, exist_ok=True)
 
@@ -471,13 +482,15 @@ def never_repeat_chart_func(dist_df):
 def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFrame:
     if filtered.empty:
         return pd.DataFrame(columns=[
-            "Boy", "Toplam Kayıt Sayısı", "Farklı Sipariş Sayısı",
-            "Farklı Profil Sayısı", "Toplam Üretilen Boy", "Toplam Kg"
+            "Sipariş Boyu",
+            "Toplam Sipariş Sayısı",
+            "Bu Boydaki Farklı Profil Sayısı",
+            "Bu Boydaki Toplam Üretim",
+            "Bu Boydaki Toplam Ağırlık (Kg)"
         ])
 
     grouped = filtered.groupby("adet").agg(
-        toplam_satir=("siparis_no", "size"),
-        farkli_siparis=("siparis_no", pd.Series.nunique),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),  # 🔥 ANA METRİK (DOĞRU)
         farkli_profil=("profil", pd.Series.nunique),
         toplam_boy=("adet", "sum"),
         toplam_kg=("kg", lambda x: x.fillna(0).sum()),
@@ -488,35 +501,25 @@ def build_boy_breakdown(filtered: pd.DataFrame, secilen_boy: int) -> pd.DataFram
 
     for boy in range(secilen_boy, 0, -1):
         row = grouped_map.get(boy)
+
         if row is None:
             rows.append({
-                "Boy": boy,
-                "Toplam Kayıt Sayısı": 0,
-                "Farklı Sipariş Sayısı": 0,
-                "Farklı Profil Sayısı": 0,
-                "Toplam Üretilen Boy": 0,
-                "Toplam Kg": 0.0,
+                "Sipariş Boyu": boy,
+                "Toplam Sipariş Sayısı": 0,
+                "Bu Boydaki Farklı Profil Sayısı": 0,
+                "Bu Boydaki Toplam Üretim": 0,
+                "Bu Boydaki Toplam Ağırlık (Kg)": 0.0,
             })
         else:
             rows.append({
-                "Boy": boy,
-                "Toplam Kayıt Sayısı": int(row["toplam_satir"]),
-                "Farklı Sipariş Sayısı": int(row["farkli_siparis"]),
-                "Farklı Profil Sayısı": int(row["farkli_profil"]),
-                "Toplam Üretilen Boy": int(row["toplam_boy"]),
-                "Toplam Kg": float(round(row["toplam_kg"], 2)),
+                "Sipariş Boyu": boy,
+                "Toplam Sipariş Sayısı": int(row["siparis_sayisi"]),
+                "Bu Boydaki Farklı Profil Sayısı": int(row["farkli_profil"]),
+                "Bu Boydaki Toplam Üretim": int(row["toplam_boy"]),
+                "Bu Boydaki Toplam Ağırlık (Kg)": float(round(row["toplam_kg"], 2)),
             })
 
-    result = pd.DataFrame(rows)
-    result = result.rename(columns={
-        "Boy": "Sipariş Boyu",
-        "Toplam Kayıt Sayısı": "Toplam Kayıt Sayısı",
-        "Farklı Sipariş Sayısı": "Bu Boydaki Farklı Sipariş Sayısı",
-        "Farklı Profil Sayısı": "Bu Boydaki Farklı Profil Sayısı",
-        "Toplam Üretilen Boy": "Bu Boydaki Toplam Üretim",
-        "Toplam Kg": "Bu Boydaki Toplam Ağırlık (Kg)"
-    })
-    return result
+    return pd.DataFrame(rows)
 
 def build_profile_detail(df: pd.DataFrame, profil_kodu: str, yillar):
     data = df[df["profil"] == profil_kodu].copy()
@@ -903,7 +906,7 @@ def high_volume_summary_markdown(scope_df: pd.DataFrame, min_boy: int) -> str:
         "### En Çok Üretime Giren Ürünler Özeti",
         f"- Kriter: **{min_boy} boy ve üstü**",
         f"- Tarih aralığı: **{yil_min} - {yil_max}**",
-        f"- Toplam kayıt sayısı: **{toplam_satir:,}**",
+        f"- Toplam kayıt sayısı (Satır Sayısı): **{toplam_satir:,}**",
         f"- Farklı sipariş sayısı: **{toplam_siparis:,}**",
         f"- Farklı profil sayısı: **{toplam_profil:,}**",
         f"- Toplam üretilen boy: **{toplam_adet:,}**",
@@ -912,10 +915,72 @@ def high_volume_summary_markdown(scope_df: pd.DataFrame, min_boy: int) -> str:
         f"- En çok üretime giren profil: **{lider_profil}**",
         f"- Bu profilin toplam üretim miktarı: **{lider_adet:,} boy**",
     ]
+    
+    dagilim = build_big_order_distribution(scope_df, min_boy)
+
+    if dagilim:
+        lines += [
+            "",
+            "## 📦 Sipariş Dağılımı (Sipariş Bazlı)",
+            f"- Toplam sipariş: **{dagilim['toplam_siparis']:,}**",
+            f"- 🔴 Sadece küçük sipariş: **{dagilim['sadece_kucuk']:,}**",
+            f"- 🟢 Sadece büyük sipariş: **{dagilim['sadece_buyuk']:,}**",
+            f"- 🟡 Hem küçük hem büyük: **{dagilim['karisik']:,}**",
+
+            "",
+            "### 🔩 Dağılım Oranları",
+            f"- Küçük sipariş satır oranı: **%{dagilim['kucuk_satir_oran']:.1f}**",
+            f"- Büyük sipariş satır oranı: **%{dagilim['buyuk_satir_oran']:.1f}**",
+            f"- Küçük sipariş üretim payı: **%{dagilim['kucuk_adet_oran']:.1f}**",
+            f"- Büyük sipariş üretim payı: **%{dagilim['buyuk_adet_oran']:.1f}**",
+        ]
 
     return "\n".join(lines)
 
+def build_big_order_distribution(scope_df: pd.DataFrame, min_boy: int) -> dict:
+    if scope_df.empty:
+        return {}
 
+    df = scope_df.copy()
+
+    # Sipariş bazlı sınıflandırma
+    siparis_grup = df.groupby("siparis_no")["adet"].agg(
+        min_adet="min",
+        max_adet="max"
+    ).reset_index()
+
+    sadece_kucuk = siparis_grup[siparis_grup["max_adet"] <= min_boy]
+    sadece_buyuk = siparis_grup[siparis_grup["min_adet"] > min_boy]
+    karisik = siparis_grup[
+        (siparis_grup["min_adet"] <= min_boy) &
+        (siparis_grup["max_adet"] > min_boy)
+    ]
+
+    toplam_siparis = len(siparis_grup)
+
+    # kayıt bazlı
+    toplam_satir = len(df)
+    kucuk_satir = len(df[df["adet"] < min_boy])
+    buyuk_satir = len(df[df["adet"] >= min_boy])
+
+    # üretim bazlı
+    toplam_adet = df["adet"].sum()
+    kucuk_adet = df[df["adet"] < min_boy]["adet"].sum()
+    buyuk_adet = df[df["adet"] >= min_boy]["adet"].sum()
+
+    return {
+        "toplam_siparis": toplam_siparis,
+        "sadece_kucuk": len(sadece_kucuk),
+        "sadece_buyuk": len(sadece_buyuk),
+        "karisik": len(karisik),
+
+        "kucuk_satir_oran": (kucuk_satir / toplam_satir * 100) if toplam_satir else 0,
+        "buyuk_satir_oran": (buyuk_satir / toplam_satir * 100) if toplam_satir else 0,
+
+        "kucuk_adet_oran": (kucuk_adet / toplam_adet * 100) if toplam_adet else 0,
+        "buyuk_adet_oran": (buyuk_adet / toplam_adet * 100) if toplam_adet else 0,
+    }
+    
 def build_abc_analysis(scope_df: pd.DataFrame, hedef_uretim: int) -> pd.DataFrame:
     if scope_df.empty:
         return pd.DataFrame(columns=[
@@ -1682,11 +1747,10 @@ def boy_breakdown_chart(boy_breakdown: pd.DataFrame):
     fig = px.bar(
         boy_breakdown.sort_values("Sipariş Boyu"),
         x="Sipariş Boyu",
-        y="Toplam Kayıt Sayısı",
-        title="Boylara Göre Sipariş Dağılımı",
-        text="Toplam Kayıt Sayısı",
+        y="Toplam Sipariş Sayısı",  # ✅ FIX
+        text="Toplam Sipariş Sayısı",  # ✅ FIX
+        title="Boylara Göre Sipariş Dağılımı (Sipariş Bazlı)",
         hover_data=[
-            "Bu Boydaki Farklı Sipariş Sayısı",
             "Bu Boydaki Farklı Profil Sayısı",
             "Bu Boydaki Toplam Üretim",
             "Bu Boydaki Toplam Ağırlık (Kg)"
@@ -1894,6 +1958,289 @@ def load_customer_detail(musteri, excel_file, secilen_boy, mod, yillar, profil_a
 
     return build_customer_detail(scope_df, musteri, int(secilen_boy))
 
+def season_profile_options():
+    return [SEASON_PROFILE_ALL_LABEL] + SEASON_PROFILES
+
+
+def filter_season_profiles(df: pd.DataFrame, profil_secimi: str):
+    secim = str(profil_secimi or SEASON_PROFILE_ALL_LABEL).strip()
+    if secim == SEASON_PROFILE_ALL_LABEL:
+        return df[df["profil"].isin(SEASON_PROFILES)].copy()
+    return df[df["profil"] == secim].copy()
+
+
+def build_season_kpi_table(season_df: pd.DataFrame, profil_secimi: str) -> pd.DataFrame:
+    if season_df.empty:
+        return pd.DataFrame(columns=["Metrik", "Değer"])
+
+    ilk_tarih = season_df["tarih"].min()
+    son_tarih = season_df["tarih"].max()
+    aylik_toplam = season_df.groupby("ay")["adet"].sum().sort_values(ascending=False)
+    en_yogun_ay = aylik_toplam.index[0] if not aylik_toplam.empty else "-"
+    en_yogun_ay_boy = int(aylik_toplam.iloc[0]) if not aylik_toplam.empty else 0
+    musteri_sayisi = int(season_df[season_df["musteri_siparis_no"].astype(str).str.strip().ne("")]["musteri_siparis_no"].nunique())
+    sezon_ay_sayisi = int(season_df["ay"].nunique())
+    toplam_boy = int(season_df["adet"].sum())
+    siparis_sayisi = int(season_df["siparis_no"].nunique())
+    kg = float(season_df["kg"].fillna(0).sum())
+    profil_sayisi = int(season_df["profil"].nunique())
+    siparis_ort = round(toplam_boy / siparis_sayisi, 2) if siparis_sayisi else 0
+    aylik_ort = round(toplam_boy / sezon_ay_sayisi, 2) if sezon_ay_sayisi else 0
+
+    return pd.DataFrame([
+        ["Profil Seçimi", profil_secimi],
+        ["Toplam Üretim (Boy)", toplam_boy],
+        ["Toplam Kg", round(kg, 2)],
+        ["Farklı Sipariş Sayısı", siparis_sayisi],
+        ["Aktif Müşteri / Kod", musteri_sayisi],
+        ["Kapsamdaki Profil Sayısı", profil_sayisi],
+        ["Sipariş Başına Ortalama Boy", siparis_ort],
+        ["Aylık Ortalama Üretim", aylik_ort],
+        ["En Yoğun Ay", en_yogun_ay],
+        ["En Yoğun Ay Üretimi", en_yogun_ay_boy],
+        ["İlk Sipariş Tarihi", ilk_tarih.strftime("%Y-%m-%d") if pd.notna(ilk_tarih) else "-"],
+        ["Son Sipariş Tarihi", son_tarih.strftime("%Y-%m-%d") if pd.notna(son_tarih) else "-"],
+        ["Aktif Sezon Ayı", sezon_ay_sayisi],
+    ], columns=["Metrik", "Değer"])
+
+
+def build_season_profile_breakdown(scope_df: pd.DataFrame) -> pd.DataFrame:
+    season_all = scope_df[scope_df["profil"].isin(SEASON_PROFILES)].copy()
+    if season_all.empty:
+        return pd.DataFrame(columns=["Profil", "Toplam Üretim (Boy)", "Toplam Kg", "Sipariş Sayısı", "Müşteri/Kod Sayısı", "Pay (%)"])
+
+    prof = season_all.groupby("profil", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+        musteri_sayisi=("musteri_siparis_no", lambda x: x.astype(str).str.strip().replace('', pd.NA).dropna().nunique()),
+    )
+    toplam = prof["toplam_adet"].sum()
+    prof["pay"] = (prof["toplam_adet"] / toplam * 100).round(2) if toplam else 0
+    prof["toplam_kg"] = prof["toplam_kg"].round(2)
+    prof = prof.rename(columns={
+        "profil": "Profil",
+        "toplam_adet": "Toplam Üretim (Boy)",
+        "toplam_kg": "Toplam Kg",
+        "siparis_sayisi": "Sipariş Sayısı",
+        "musteri_sayisi": "Müşteri/Kod Sayısı",
+        "pay": "Pay (%)",
+    })
+    return prof.sort_values("Toplam Üretim (Boy)", ascending=False)
+
+
+def build_season_monthly_table(season_df: pd.DataFrame) -> pd.DataFrame:
+    if season_df.empty:
+        return pd.DataFrame(columns=["Yıl", "Ay", "Toplam Boy", "Toplam Kg", "Sipariş Sayısı", "Müşteri/Kod Sayısı"])
+
+    aylik = season_df.groupby(["yil", "ay"], as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+        musteri_sayisi=("musteri_siparis_no", lambda x: x.astype(str).str.strip().replace('', pd.NA).dropna().nunique()),
+    )
+    aylik["toplam_kg"] = aylik["toplam_kg"].round(2)
+    aylik = aylik.rename(columns={
+        "yil": "Yıl",
+        "ay": "Ay",
+        "toplam_adet": "Toplam Boy",
+        "toplam_kg": "Toplam Kg",
+        "siparis_sayisi": "Sipariş Sayısı",
+        "musteri_sayisi": "Müşteri/Kod Sayısı",
+    })
+    return aylik.sort_values(["Yıl", "Ay"])
+
+
+def build_season_year_summary(season_df: pd.DataFrame) -> pd.DataFrame:
+    if season_df.empty:
+        return pd.DataFrame(columns=["Yıl", "Toplam Boy", "Toplam Kg", "Sipariş Sayısı", "Müşteri/Kod Sayısı", "Aktif Ay"])
+
+    yil = season_df.groupby("yil", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+        musteri_sayisi=("musteri_siparis_no", lambda x: x.astype(str).str.strip().replace('', pd.NA).dropna().nunique()),
+        aktif_ay=("ay", pd.Series.nunique),
+    )
+    yil["toplam_kg"] = yil["toplam_kg"].round(2)
+    yil = yil.rename(columns={
+        "yil": "Yıl",
+        "toplam_adet": "Toplam Boy",
+        "toplam_kg": "Toplam Kg",
+        "siparis_sayisi": "Sipariş Sayısı",
+        "musteri_sayisi": "Müşteri/Kod Sayısı",
+        "aktif_ay": "Aktif Ay",
+    })
+    return yil.sort_values("Yıl")
+
+
+def build_season_year_month_pivot(season_df: pd.DataFrame) -> pd.DataFrame:
+    if season_df.empty:
+        return pd.DataFrame()
+    return build_year_month_pivot(season_df)
+
+
+def season_summary_markdown(season_df: pd.DataFrame, profil_secimi: str) -> str:
+    if season_df.empty:
+        return "### Sonuç\nSeçilen profile göre sezon verisi bulunamadı."
+
+    toplam_boy = int(season_df["adet"].sum())
+    siparis = int(season_df["siparis_no"].nunique())
+    kg = float(season_df["kg"].fillna(0).sum())
+    profil_sayisi = int(season_df["profil"].nunique())
+    musteri = int(season_df[season_df["musteri_siparis_no"].astype(str).str.strip().ne("")]["musteri_siparis_no"].nunique())
+    aylik = season_df.groupby("ay")["adet"].sum().sort_values(ascending=False)
+    en_yogun_ay = aylik.index[0] if not aylik.empty else "-"
+    en_yogun_ay_boy = int(aylik.iloc[0]) if not aylik.empty else 0
+    ilk = season_df["tarih"].min()
+    son = season_df["tarih"].max()
+    sezon_aylari = sorted(season_df["tarih"].dt.month.dropna().unique().tolist())
+    sezon_aralik = f"{ilk.strftime('%Y-%m-%d')} → {son.strftime('%Y-%m-%d')}" if pd.notna(ilk) and pd.notna(son) else "-"
+
+    return "\n".join([
+        "## 🪟 Sineklik Sezon Analizi",
+        f"- Profil seçimi: **{profil_secimi}**",
+        f"- Kapsamdaki profil sayısı: **{profil_sayisi}**",
+        f"- Toplam üretim: **{toplam_boy:,} boy**",
+        f"- Toplam kg: **{kg:,.2f}**",
+        f"- Farklı sipariş sayısı: **{siparis:,}**",
+        f"- Aktif müşteri/kod sayısı: **{musteri:,}**",
+        f"- Sezon aralığı: **{sezon_aralik}**",
+        f"- Aktif aylar: **{', '.join(str(x) for x in sezon_aylari)}**",
+        f"- En yoğun ay: **{en_yogun_ay}** ({en_yogun_ay_boy:,} boy)",
+    ])
+
+
+def season_monthly_chart(monthly_df: pd.DataFrame, profil_secimi: str):
+    if monthly_df.empty:
+        return None
+    fig = px.line(
+        monthly_df,
+        x="Ay",
+        y="Toplam Boy",
+        markers=True,
+        title=f"Sineklik Sezon Trendi - {profil_secimi}",
+        hover_data=["Toplam Kg", "Sipariş Sayısı", "Müşteri/Kod Sayısı"],
+    )
+    fig.update_layout(height=420)
+    return fig
+
+
+def get_available_season_customers(season_df: pd.DataFrame):
+    if season_df.empty:
+        return []
+    mapping = load_customer_mapping()
+    if not mapping:
+        return []
+    mevcut = set(season_df["musteri_siparis_no"].astype(str).str.strip().str.upper())
+    bulunan = []
+    for ana in sorted(mapping.keys()):
+        grup = set(get_customer_group_list(mapping, ana))
+        if mevcut & grup:
+            bulunan.append(ana)
+    return bulunan
+
+
+def build_season_customer_detail(season_df: pd.DataFrame, musteri_adi: str):
+    musteri_adi = str(musteri_adi or "").strip().upper()
+    if season_df.empty or not musteri_adi:
+        return pd.DataFrame(columns=["Metrik", "Değer"]), pd.DataFrame(columns=["Ay", "Toplam Boy", "Sipariş Sayısı"]), None, "### Müşteri detayı için seçim yapın"
+
+    mapping = load_customer_mapping()
+    grup_listesi = get_customer_group_list(mapping, musteri_adi)
+    if not grup_listesi:
+        return pd.DataFrame(columns=["Metrik", "Değer"]), pd.DataFrame(columns=["Ay", "Toplam Boy", "Sipariş Sayısı"]), None, "### Bu müşteri mapping içinde bulunamadı"
+
+    df = season_df[season_df["musteri_siparis_no"].astype(str).str.upper().isin(grup_listesi)].copy()
+    if df.empty:
+        return pd.DataFrame(columns=["Metrik", "Değer"]), pd.DataFrame(columns=["Ay", "Toplam Boy", "Sipariş Sayısı"]), None, "### Seçilen müşteri bu profil/filtre altında kayıt içermiyor"
+
+    ozet = pd.DataFrame([
+        ["Müşteri", musteri_adi],
+        ["Toplam Boy", int(df["adet"].sum())],
+        ["Toplam Kg", round(float(df["kg"].fillna(0).sum()), 2)],
+        ["Sipariş Sayısı", int(df["siparis_no"].nunique())],
+        ["Çektiği Profil Sayısı", int(df["profil"].nunique())],
+        ["Kayıt Sayısı", len(df)],
+    ], columns=["Metrik", "Değer"])
+
+    aylik = df.groupby("ay", as_index=False).agg(
+        toplam_adet=("adet", "sum"),
+        siparis_sayisi=("siparis_no", pd.Series.nunique),
+        toplam_kg=("kg", lambda x: x.fillna(0).sum()),
+    ).sort_values("ay")
+    aylik["toplam_kg"] = aylik["toplam_kg"].round(2)
+    aylik = aylik.rename(columns={
+        "ay": "Ay",
+        "toplam_adet": "Toplam Boy",
+        "siparis_sayisi": "Sipariş Sayısı",
+        "toplam_kg": "Toplam Kg",
+    })
+
+    fig = px.bar(
+        aylik,
+        x="Ay",
+        y="Toplam Boy",
+        title=f"Müşteri Bazlı Çekiş - {musteri_adi}",
+        hover_data=["Sipariş Sayısı", "Toplam Kg"],
+        text="Toplam Boy",
+    )
+    fig.update_layout(height=380)
+
+    yorum = "\n".join([
+        f"## 👤 {musteri_adi}",
+        f"- Toplam çekiş: **{int(df['adet'].sum()):,} boy**",
+        f"- Sipariş sayısı: **{int(df['siparis_no'].nunique()):,}**",
+        f"- Çektiği profil sayısı: **{int(df['profil'].nunique())}**",
+    ])
+    return ozet, aylik, fig, yorum
+
+
+def load_season_analysis(profil_secimi, excel_file, yillar, profil_ara):
+    global GLOBAL_DF
+    df = GLOBAL_DF if GLOBAL_DF is not None else load_excel(excel_file)
+    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+    scope_df = filter_scope_data(df, selected_years, profil_ara)
+    season_df = filter_season_profiles(scope_df, profil_secimi)
+
+    summary_md = season_summary_markdown(season_df, profil_secimi)
+    kpi_df = build_season_kpi_table(season_df, profil_secimi)
+    profile_breakdown_df = build_season_profile_breakdown(scope_df)
+    monthly_df = build_season_monthly_table(season_df)
+    year_df = build_season_year_summary(season_df)
+    pivot_df = build_season_year_month_pivot(season_df)
+    monthly_fig = season_monthly_chart(monthly_df, profil_secimi)
+
+    customer_choices = get_available_season_customers(season_df)
+    customer_value = customer_choices[0] if customer_choices else None
+    customer_update = gr.update(choices=customer_choices, value=customer_value)
+    cust_summary_df, cust_monthly_df, cust_fig, cust_md = build_season_customer_detail(season_df, customer_value)
+
+    return (
+        summary_md,
+        kpi_df,
+        profile_breakdown_df,
+        monthly_df,
+        year_df,
+        pivot_df,
+        monthly_fig,
+        customer_update,
+        cust_summary_df,
+        cust_monthly_df,
+        cust_fig,
+        cust_md,
+    )
+
+
+def load_season_customer_detail(musteri_adi, profil_secimi, excel_file, yillar, profil_ara):
+    global GLOBAL_DF
+    df = GLOBAL_DF if GLOBAL_DF is not None else load_excel(excel_file)
+    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+    scope_df = filter_scope_data(df, selected_years, profil_ara)
+    season_df = filter_season_profiles(scope_df, profil_secimi)
+    return build_season_customer_detail(season_df, musteri_adi)
+
+
 def summary_markdown(
     filtered: pd.DataFrame,
     scope_df: pd.DataFrame,
@@ -2034,7 +2381,7 @@ def summary_markdown(
 
         lines += [
             "",
-            f"**Tam {secilen_boy} boy olanlar**",
+            f"**Tam {secilen_boy} boy olanlar (Seçilen Boy Sayısı)**",
             f"- Satır sayısı: **{len(exact):,}**",
             f"- Sipariş sayısı: **{exact['siparis_no'].nunique():,}**",
             f"- Profil sayısı: **{exact['profil'].nunique():,}**",
@@ -2098,8 +2445,8 @@ def never_exceed_summary_markdown(
         "",
         "### Toplam Sonuçlar",
         f"- Farklı sipariş sayısı: **{benzersiz_siparis:,}**",
-        f"- Toplam kayıt sayısı: **{toplam_satir:,}**",
-        f"- Toplam üretim: **{toplam_adet:,}**",
+        f"- Toplam kayıt sayısı (Satır Sayısı): **{toplam_satir:,}**",
+        f"- Toplam üretim (Boy Sayısı): **{toplam_adet:,}**",
         f"- Toplam kg: **{toplam_kg:,.2f}**",
         f"- Bu grupta görülen en yüksek sipariş boyu: **{max_boy}**",
         f"- Ortalama sipariş boyu: **{ort_boy}**",
@@ -2201,6 +2548,20 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     
     customer_mapping = load_customer_mapping()
     musteri_list = sorted(customer_mapping.keys()) if customer_mapping else ["-"]
+
+    season_default_profile = SEASON_PROFILE_ALL_LABEL
+    season_df = filter_season_profiles(scope_df, season_default_profile)
+    season_summary_text = season_summary_markdown(season_df, season_default_profile)
+    season_kpi_df = build_season_kpi_table(season_df, season_default_profile)
+    season_profile_breakdown_df = build_season_profile_breakdown(scope_df)
+    season_monthly_df = build_season_monthly_table(season_df)
+    season_year_df = build_season_year_summary(season_df)
+    season_pivot_df = build_season_year_month_pivot(season_df)
+    season_monthly_fig = season_monthly_chart(season_monthly_df, season_default_profile)
+    season_customer_choices = get_available_season_customers(season_df)
+    season_customer_value = season_customer_choices[0] if season_customer_choices else None
+    season_customer_summary_df, season_customer_monthly_df, season_customer_fig, season_customer_md = build_season_customer_detail(season_df, season_customer_value)
+
     exec_summary = build_executive_summary(
         scope_df,
         abc_df,
@@ -2245,6 +2606,19 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     
         gr.update(choices=profile_list, value=profile_list[0]),
         gr.update(choices=musteri_list, value=musteri_list[0]),
+
+        season_summary_text,
+        season_kpi_df,
+        season_profile_breakdown_df,
+        season_monthly_df,
+        season_year_df,
+        season_pivot_df,
+        season_monthly_fig,
+        gr.update(choices=season_customer_choices, value=season_customer_value),
+        season_customer_summary_df,
+        season_customer_monthly_df,
+        season_customer_fig,
+        season_customer_md,
     
         exec_summary,
         dashboard_kpi_df,
@@ -2970,6 +3344,52 @@ with gr.Blocks(
                     abc_plot = gr.Plot(label="ABC Analizi")
                     abc_table = gr.Dataframe(interactive=False, wrap=True)
 
+                with gr.Tab("☀️ Sineklik Sezon Analizi"):
+                    gr.Markdown("""
+                    ### 📌 Sineklik Sezon Ekranı
+
+                    Bu ekran sadece şu 3 profili izler:
+                    - 15-302517-07
+                    - 15-302517-08
+                    - 15-302517-10
+
+                    Dropdown ile toplam görünüm ve tek profil görünümü arasında geçiş yapabilirsiniz.
+                    """)
+
+                    season_profile_select = gr.Dropdown(
+                        label="🧩 Profil Seçimi",
+                        choices=season_profile_options(),
+                        value=SEASON_PROFILE_ALL_LABEL
+                    )
+
+                    season_summary_md = gr.Markdown()
+
+                    with gr.Row():
+                        season_chart_monthly = gr.Plot(label="📈 Aylık Sezon Trendi")
+                        season_customer_chart = gr.Plot(label="👤 Müşteri Bazlı Çekiş")
+
+                    with gr.Tabs():
+                        with gr.Tab("Özet KPI"):
+                            season_kpi_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Profil Kırılımı"):
+                            season_profile_breakdown_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Aylık Detay"):
+                            season_monthly_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Yıl Özeti"):
+                            season_year_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Yıl-Ay Pivot"):
+                            season_pivot_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Müşteri Analizi"):
+                            season_customer_select = gr.Dropdown(label="👤 Müşteri Seç", choices=[])
+                            season_customer_summary_table = gr.Dataframe(interactive=False, wrap=True)
+                            season_customer_monthly_table = gr.Dataframe(interactive=False, wrap=True)
+                            season_customer_md = gr.Markdown()
+
                 with gr.Tab("🧠 Yönetici Özeti"):
                     gr.Markdown("""
                     ### 📌 Bu ekran ne sağlar?
@@ -3139,6 +3559,18 @@ with gr.Blocks(
             abc_plot,
             profil_sec,
             musteri_sec,
+            season_summary_md,
+            season_kpi_table,
+            season_profile_breakdown_table,
+            season_monthly_table,
+            season_year_table,
+            season_pivot_table,
+            season_chart_monthly,
+            season_customer_select,
+            season_customer_summary_table,
+            season_customer_monthly_table,
+            season_customer_chart,
+            season_customer_md,
             exec_summary_md,
             dashboard_kpi_table,
             dashboard_monthly_table,
@@ -3190,14 +3622,49 @@ with gr.Blocks(
         outputs=[musteri_ozet, musteri_yorum]
     )
 
+    season_profile_select.change(
+        fn=load_season_analysis,
+        inputs=[season_profile_select, excel_file, years, profil_ara],
+        outputs=[
+            season_summary_md,
+            season_kpi_table,
+            season_profile_breakdown_table,
+            season_monthly_table,
+            season_year_table,
+            season_pivot_table,
+            season_chart_monthly,
+            season_customer_select,
+            season_customer_summary_table,
+            season_customer_monthly_table,
+            season_customer_chart,
+            season_customer_md,
+        ]
+    )
+
+    season_customer_select.change(
+        fn=load_season_customer_detail,
+        inputs=[season_customer_select, season_profile_select, excel_file, years, profil_ara],
+        outputs=[
+            season_customer_summary_table,
+            season_customer_monthly_table,
+            season_customer_chart,
+            season_customer_md,
+        ]
+    )
+
 if __name__ == "__main__":
     import os
 
-    port = int(os.environ.get("PORT", 7860))
+    is_render = os.environ.get("RENDER") is not None
 
-    demo.queue().launch(
-        server_name="0.0.0.0",
-        server_port=port,
-        favicon_path="favicon.png",
-        show_error=True
-    )
+    if is_render:
+        port = int(os.environ.get("PORT", 7860))
+
+        demo.queue().launch(
+            server_name="0.0.0.0",
+            server_port=port,
+            favicon_path="favicon.png",
+            show_error=True
+        )
+    else:
+        demo.launch(debug=True)
