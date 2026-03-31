@@ -44,12 +44,20 @@ else:
     CACHE_DIR = os.path.join(BASE_DIR, "cache_data")
     REPORT_DIR = os.path.join(BASE_DIR, "generated_reports")
 MAPPING_FILE = os.path.join(BASE_DIR, "musteri_mapping.json")
+
 SEASON_PROFILES = [
     "15-302517-07",
     "15-302517-08",
     "15-302517-10",
 ]
 SEASON_PROFILE_ALL_LABEL = "TÜMÜ (3 Profil Toplam)"
+
+PILISE_PROFILES = [
+    "13-09808EY",
+    "13-09483EY",
+]
+PILISE_PROFILE_ALL_LABEL = "TÜMÜ (2 Profil Toplam)"
+
 os.makedirs(CACHE_DIR, exist_ok=True)
 os.makedirs(REPORT_DIR, exist_ok=True)
 
@@ -402,6 +410,22 @@ def filter_never_exceed_profiles(scope_df: pd.DataFrame, secilen_boy: int, profi
 
     result = filtered[filtered["profil"].isin(uygun_profiller)].copy()
     return result
+
+def filter_selected_screen_group(df: pd.DataFrame, grup_secimi: str, profil_secimi: str):
+    grup_secimi = str(grup_secimi or "").strip()
+
+    if grup_secimi == "Pilise Sineklik Profilleri":
+        return filter_pilise_profiles(df, profil_secimi)
+
+    return filter_season_profiles(df, profil_secimi)
+
+def update_profile_dropdown_by_group(grup_secimi):
+    if str(grup_secimi).strip() == "Pilise Sineklik Profilleri":
+        secenekler = pilise_profile_options()
+    else:
+        secenekler = season_profile_options()
+
+    return gr.update(choices=secenekler, value=secenekler[0] if secenekler else None)
 
 def build_never_profile_repeat(never_df: pd.DataFrame):
     if never_df.empty:
@@ -1968,7 +1992,15 @@ def filter_season_profiles(df: pd.DataFrame, profil_secimi: str):
         return df[df["profil"].isin(SEASON_PROFILES)].copy()
     return df[df["profil"] == secim].copy()
 
+def pilise_profile_options():
+    return [PILISE_PROFILE_ALL_LABEL] + PILISE_PROFILES
 
+def filter_pilise_profiles(df: pd.DataFrame, profil_secimi: str):
+    secim = str(profil_secimi or PILISE_PROFILE_ALL_LABEL).strip()
+    if secim == PILISE_PROFILE_ALL_LABEL:
+        return df[df["profil"].isin(PILISE_PROFILES)].copy()
+    return df[df["profil"] == secim].copy()
+    
 def build_season_kpi_table(season_df: pd.DataFrame, profil_secimi: str) -> pd.DataFrame:
     if season_df.empty:
         return pd.DataFrame(columns=["Metrik", "Değer"])
@@ -2004,20 +2036,21 @@ def build_season_kpi_table(season_df: pd.DataFrame, profil_secimi: str) -> pd.Da
     ], columns=["Metrik", "Değer"])
 
 
-def build_season_profile_breakdown(scope_df: pd.DataFrame) -> pd.DataFrame:
-    season_all = scope_df[scope_df["profil"].isin(SEASON_PROFILES)].copy()
-    if season_all.empty:
+def build_season_profile_breakdown(season_df: pd.DataFrame) -> pd.DataFrame:
+    if season_df.empty:
         return pd.DataFrame(columns=["Profil", "Toplam Üretim (Boy)", "Toplam Kg", "Sipariş Sayısı", "Müşteri/Kod Sayısı", "Pay (%)"])
 
-    prof = season_all.groupby("profil", as_index=False).agg(
+    prof = season_df.groupby("profil", as_index=False).agg(
         toplam_adet=("adet", "sum"),
         toplam_kg=("kg", lambda x: x.fillna(0).sum()),
         siparis_sayisi=("siparis_no", pd.Series.nunique),
         musteri_sayisi=("musteri_siparis_no", lambda x: x.astype(str).str.strip().replace('', pd.NA).dropna().nunique()),
     )
+
     toplam = prof["toplam_adet"].sum()
     prof["pay"] = (prof["toplam_adet"] / toplam * 100).round(2) if toplam else 0
     prof["toplam_kg"] = prof["toplam_kg"].round(2)
+
     prof = prof.rename(columns={
         "profil": "Profil",
         "toplam_adet": "Toplam Üretim (Boy)",
@@ -2026,6 +2059,7 @@ def build_season_profile_breakdown(scope_df: pd.DataFrame) -> pd.DataFrame:
         "musteri_sayisi": "Müşteri/Kod Sayısı",
         "pay": "Pay (%)",
     })
+
     return prof.sort_values("Toplam Üretim (Boy)", ascending=False)
 
 
@@ -2196,16 +2230,17 @@ def build_season_customer_detail(season_df: pd.DataFrame, musteri_adi: str):
     return ozet, aylik, fig, yorum
 
 
-def load_season_analysis(profil_secimi, excel_file, yillar, profil_ara):
+def load_season_analysis(grup_secimi, profil_secimi, excel_file, yillar, profil_ara):
     global GLOBAL_DF
     df = GLOBAL_DF if GLOBAL_DF is not None else load_excel(excel_file)
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
     scope_df = filter_scope_data(df, selected_years, profil_ara)
-    season_df = filter_season_profiles(scope_df, profil_secimi)
+
+    season_df = filter_selected_screen_group(scope_df, grup_secimi, profil_secimi)
 
     summary_md = season_summary_markdown(season_df, profil_secimi)
     kpi_df = build_season_kpi_table(season_df, profil_secimi)
-    profile_breakdown_df = build_season_profile_breakdown(scope_df)
+    profile_breakdown_df = build_season_profile_breakdown(season_df)
     monthly_df = build_season_monthly_table(season_df)
     year_df = build_season_year_summary(season_df)
     pivot_df = build_season_year_month_pivot(season_df)
@@ -2232,12 +2267,12 @@ def load_season_analysis(profil_secimi, excel_file, yillar, profil_ara):
     )
 
 
-def load_season_customer_detail(musteri_adi, profil_secimi, excel_file, yillar, profil_ara):
+def load_season_customer_detail(musteri_adi, grup_secimi, profil_secimi, excel_file, yillar, profil_ara):
     global GLOBAL_DF
     df = GLOBAL_DF if GLOBAL_DF is not None else load_excel(excel_file)
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
     scope_df = filter_scope_data(df, selected_years, profil_ara)
-    season_df = filter_season_profiles(scope_df, profil_secimi)
+    season_df = filter_selected_screen_group(scope_df, grup_secimi, profil_secimi)
     return build_season_customer_detail(season_df, musteri_adi)
 
 
@@ -2549,11 +2584,13 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     customer_mapping = load_customer_mapping()
     musteri_list = sorted(customer_mapping.keys()) if customer_mapping else ["-"]
 
+    season_default_group = "Sineklik Profilleri"
     season_default_profile = SEASON_PROFILE_ALL_LABEL
-    season_df = filter_season_profiles(scope_df, season_default_profile)
+    
+    season_df = filter_selected_screen_group(scope_df, season_default_group, season_default_profile)
     season_summary_text = season_summary_markdown(season_df, season_default_profile)
     season_kpi_df = build_season_kpi_table(season_df, season_default_profile)
-    season_profile_breakdown_df = build_season_profile_breakdown(scope_df)
+    season_profile_breakdown_df = build_season_profile_breakdown(season_df)
     season_monthly_df = build_season_monthly_table(season_df)
     season_year_df = build_season_year_summary(season_df)
     season_pivot_df = build_season_year_month_pivot(season_df)
@@ -3346,22 +3383,34 @@ with gr.Blocks(
 
                 with gr.Tab("☀️ Sineklik Sezon Analizi"):
                     gr.Markdown("""
-                    ### 📌 Sineklik Sezon Ekranı
-
-                    Bu ekran sadece şu 3 profili izler:
+                    ### 📌 Sineklik / Pilise Sezon Ekranı
+                    
+                    Bu ekran iki ayrı modda çalışır:
+                    
+                    **Sineklik Profilleri**
                     - 15-302517-07
                     - 15-302517-08
                     - 15-302517-10
-
-                    Dropdown ile toplam görünüm ve tek profil görünümü arasında geçiş yapabilirsiniz.
+                    
+                    **Pilise Sineklik Profilleri**
+                    - 13-09808EY
+                    - 13-09483EY
+                    
+                    Önce profil grubunu seçin, sonra toplam görünüm veya tek profil görünümü arasında geçiş yapın.
                     """)
 
+                    profil_grubu_sec = gr.Radio(
+                        label="Profil Grubu",
+                        choices=["Sineklik Profilleri", "Pilise Sineklik Profilleri"],
+                        value="Sineklik Profilleri"
+                    )
+                    
                     season_profile_select = gr.Dropdown(
                         label="🧩 Profil Seçimi",
                         choices=season_profile_options(),
                         value=SEASON_PROFILE_ALL_LABEL
                     )
-
+                    
                     season_summary_md = gr.Markdown()
 
                     with gr.Row():
@@ -3622,9 +3671,34 @@ with gr.Blocks(
         outputs=[musteri_ozet, musteri_yorum]
     )
 
+    profil_grubu_sec.change(
+        fn=update_profile_dropdown_by_group,
+        inputs=[profil_grubu_sec],
+        outputs=[season_profile_select]
+    )
+
+    profil_grubu_sec.change(
+        fn=load_season_analysis,
+        inputs=[profil_grubu_sec, season_profile_select, excel_file, years, profil_ara],
+        outputs=[
+            season_summary_md,
+            season_kpi_table,
+            season_profile_breakdown_table,
+            season_monthly_table,
+            season_year_table,
+            season_pivot_table,
+            season_chart_monthly,
+            season_customer_select,
+            season_customer_summary_table,
+            season_customer_monthly_table,
+            season_customer_chart,
+            season_customer_md,
+        ]
+    )
+
     season_profile_select.change(
         fn=load_season_analysis,
-        inputs=[season_profile_select, excel_file, years, profil_ara],
+        inputs=[profil_grubu_sec, season_profile_select, excel_file, years, profil_ara],
         outputs=[
             season_summary_md,
             season_kpi_table,
@@ -3643,7 +3717,7 @@ with gr.Blocks(
 
     season_customer_select.change(
         fn=load_season_customer_detail,
-        inputs=[season_customer_select, season_profile_select, excel_file, years, profil_ara],
+        inputs=[season_customer_select, profil_grubu_sec, season_profile_select, excel_file, years, profil_ara],
         outputs=[
             season_customer_summary_table,
             season_customer_monthly_table,
