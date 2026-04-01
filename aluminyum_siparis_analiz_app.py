@@ -125,6 +125,34 @@ def stable_hash(data) -> str:
     payload = json.dumps(data, sort_keys=True, ensure_ascii=False, default=str)
     return hashlib.md5(payload.encode("utf-8")).hexdigest()
 
+def get_robust_file_hash(filepath: str) -> str:
+    """
+    Gradio'nun değişen temp path'lerinden etkilenmeyen dosya imzası.
+    Tüm dosyayı hashlemek yerine:
+    - dosya boyutu
+    - ilk 1 MB
+    - son 1 MB
+    kullanır.
+    Büyük dosyalarda hızlı, aynı dosyada stabil.
+    """
+    size = os.path.getsize(filepath)
+    sample_size = 1024 * 1024  # 1 MB
+
+    hasher = hashlib.md5()
+    hasher.update(str(size).encode("utf-8"))
+
+    with open(filepath, "rb") as f:
+        head = f.read(sample_size)
+        hasher.update(head)
+
+        if size > sample_size:
+            tail_offset = max(size - sample_size, 0)
+            f.seek(tail_offset)
+            tail = f.read(sample_size)
+            hasher.update(tail)
+
+    return hasher.hexdigest()
+
 def get_excel_signature(excel_file) -> str:
     if excel_file is None:
         return "no_file"
@@ -136,10 +164,7 @@ def get_excel_signature(excel_file) -> str:
         if not os.path.exists(excel_path):
             return "missing_file"
 
-    stat = os.stat(excel_path)
-    return hashlib.md5(
-        f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")
-    ).hexdigest()
+    return get_robust_file_hash(excel_path)
     
 def find_column_smart(df, target):
     cols = list(df.columns)
@@ -246,8 +271,7 @@ def load_excel(excel_file) -> pd.DataFrame:
     if not os.path.exists(excel_path):
         raise ValueError("Dosya yolu alınamadı")
 
-    stat = os.stat(excel_path)
-    file_hash = hashlib.md5(f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")).hexdigest()
+    file_hash = get_robust_file_hash(excel_path)
 
     # 🚀 GLOBAL CACHE HIZLI DÖNÜŞ
     if GLOBAL_DF is not None and GLOBAL_FILE_HASH == file_hash:
@@ -2499,9 +2523,6 @@ def never_exceed_summary_markdown(
     
 def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran):
     try:
-        df = load_excel(excel_file)
-        global GLOBAL_DF
-        # 🚀 ANALİZ CACHE
         excel_signature = get_excel_signature(excel_file)
 
         analysis_key = stable_hash([
@@ -2515,12 +2536,19 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
             hedef_kucuk_oran,
         ])
         analysis_cache_path = os.path.join(CACHE_DIR, f"analysis_{analysis_key}.pkl")
-        
+
+        # 1) Önce tam analiz cache
         if os.path.exists(analysis_cache_path):
             try:
                 return pd.read_pickle(analysis_cache_path)
-            except:
+            except Exception:
                 pass
+
+        # 2) Yoksa veri cache / RAM cache üzerinden dataframe yükle
+        df = load_excel(excel_file)
+        global GLOBAL_DF
+        GLOBAL_DF = df
+
     except Exception as e:
         raise gr.Error(f"Excel yüklenemedi: {str(e)}")
     selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
@@ -2720,15 +2748,14 @@ def fast_years_from_file(excel_file):
     if not os.path.exists(excel_path):
         raise gr.Error("Dosya yolu alınamadı.")
 
-    stat = os.stat(excel_path)
-    file_hash = hashlib.md5(f"{excel_path}|{stat.st_size}|{int(stat.st_mtime)}".encode("utf-8")).hexdigest()
+    file_hash = get_robust_file_hash(excel_path)
     
     # 🚀 1. ÖNCE PARQUET CACHE - SADECE TARİH KOLONU
     parquet_years_path = os.path.join(CACHE_DIR, f"{file_hash}_years.parquet")
     if os.path.exists(parquet_years_path):
         try:
-            df_years = pd.read_parquet(parquet_years_path, columns=["tarih"], engine="pyarrow")
-            years = sorted(df_years["tarih"].dropna().dt.year.astype(int).unique().tolist())
+            df_years = pd.read_parquet(parquet_years_path, columns=["yil"], engine="pyarrow")
+            years = sorted(df_years["yil"].dropna().astype(int).unique().tolist())
             return gr.update(choices=years, value=years)
         except:
             pass
@@ -2770,11 +2797,12 @@ def fast_years_from_file(excel_file):
             usecols=[tarih_col], engine="calamine"
         )
         raw_df["tarih"] = pd.to_datetime(raw_df[tarih_col], errors="coerce", dayfirst=True)
-        years = sorted(raw_df["tarih"].dropna().dt.year.astype(int).unique().tolist())
+        raw_df["yil"] = raw_df["tarih"].dt.year
+        years = sorted(raw_df["yil"].dropna().astype(int).unique().tolist())
         
         # Cache'e yaz
         try:
-            raw_df[["tarih"]].to_parquet(parquet_years_path, index=False, engine="pyarrow")
+            raw_df[["yil"]].to_parquet(parquet_years_path, index=False, engine="pyarrow")
         except:
             pass
             
