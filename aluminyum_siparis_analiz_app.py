@@ -103,6 +103,9 @@ COLUMN_ALIASES_PRO = {
     "termin": ["Termin", "termin"],
 }
 
+# KALIP SÜRESİ HESAPLAMAK İÇİN SABİT
+SETUP_SURESI_DAKIKA = 5
+
 def normalize_text(s):
     if s is None:
         return ""
@@ -984,6 +987,97 @@ def high_volume_summary_markdown(scope_df: pd.DataFrame, min_boy: int) -> str:
         ]
 
     return "\n".join(lines)
+
+def build_setup_analysis(scope_df: pd.DataFrame, secilen_boy: int) -> dict:
+    if scope_df.empty:
+        return {}
+
+    df = scope_df.copy()
+
+    # Gerçek kalıp bağlama = aynı siparişte geçen benzersiz profil kombinasyonları
+    # Böylece aynı profil farklı siparişte tekrar ettiyse tekrar bağlama olarak sayılır
+    unique_setup_pairs = (
+        df[["siparis_no", "profil"]]
+        .dropna()
+        .drop_duplicates()
+        .copy()
+    )
+
+    total_setup_count = int(len(unique_setup_pairs))
+    total_unique_mold = int(df["profil"].nunique())
+
+    small_df = df[df["adet"] <= secilen_boy].copy()
+    small_unique_mold = int(small_df["profil"].nunique())
+
+    small_setup_pairs = (
+        small_df[["siparis_no", "profil"]]
+        .dropna()
+        .drop_duplicates()
+        .copy()
+    )
+    small_setup_count = int(len(small_setup_pairs))
+
+    large_setup_count = total_setup_count - small_setup_count
+    large_unique_mold = total_unique_mold - small_unique_mold
+
+    avg_repeat_total = round(
+        total_setup_count / total_unique_mold, 2
+    ) if total_unique_mold else 0
+
+    avg_repeat_small = round(
+        small_setup_count / small_unique_mold, 2
+    ) if small_unique_mold else 0
+
+    total_setup_hour = round(total_setup_count * (SETUP_SURESI_DAKIKA / 60), 2)
+    small_setup_hour = round(small_setup_count * (SETUP_SURESI_DAKIKA / 60), 2)
+    large_setup_hour = round(large_setup_count * (SETUP_SURESI_DAKIKA / 60), 2)
+
+    small_setup_ratio = round(
+        small_setup_count / total_setup_count * 100, 1
+    ) if total_setup_count else 0
+
+    small_unique_ratio = round(
+        small_unique_mold / total_unique_mold * 100, 1
+    ) if total_unique_mold else 0
+
+    # En çok tekrar bağlanan kalıplar
+    top_repeat = (
+        unique_setup_pairs.groupby("profil", as_index=False)
+        .agg(setup_sayisi=("siparis_no", "count"))
+        .sort_values("setup_sayisi", ascending=False)
+    )
+
+    top_repeat["tekrar_katsayisi"] = top_repeat["setup_sayisi"].round(2)
+
+    small_top_repeat = (
+        small_setup_pairs.groupby("profil", as_index=False)
+        .agg(setup_sayisi=("siparis_no", "count"))
+        .sort_values("setup_sayisi", ascending=False)
+    )
+
+    small_top_repeat["tekrar_katsayisi"] = small_top_repeat["setup_sayisi"].round(2)
+
+    return {
+        "total_unique_mold": total_unique_mold,
+        "small_unique_mold": small_unique_mold,
+        "large_unique_mold": large_unique_mold,
+        "small_unique_ratio": small_unique_ratio,
+
+        "total_setup_count": total_setup_count,
+        "small_setup_count": small_setup_count,
+        "large_setup_count": large_setup_count,
+        "small_setup_ratio": small_setup_ratio,
+
+        "avg_repeat_total": avg_repeat_total,
+        "avg_repeat_small": avg_repeat_small,
+
+        "total_setup_hour": total_setup_hour,
+        "small_setup_hour": small_setup_hour,
+        "large_setup_hour": large_setup_hour,
+
+        "top_repeat_df": top_repeat.head(20),
+        "small_top_repeat_df": small_top_repeat.head(20),
+    }
 
 def build_big_order_distribution(scope_df: pd.DataFrame, min_boy: int) -> dict:
     if scope_df.empty:
@@ -2374,6 +2468,20 @@ def summary_markdown(
     sadece_kucuk_kalip = len(kucuk_kaliplar - buyuk_kaliplar)
     sadece_buyuk_kalip = len(buyuk_kaliplar - kucuk_kaliplar)
     ortak_kalip = len(kucuk_kaliplar & buyuk_kaliplar)
+    setup_stats = build_setup_analysis(scope_df, secilen_boy)
+
+    toplam_setup_sayisi = setup_stats.get("total_setup_count", 0)
+    kucuk_setup_sayisi = setup_stats.get("small_setup_count", 0)
+    buyuk_setup_sayisi = setup_stats.get("large_setup_count", 0)
+
+    setup_tekrar_ort = setup_stats.get("avg_repeat_total", 0)
+    kucuk_setup_tekrar_ort = setup_stats.get("avg_repeat_small", 0)
+
+    toplam_setup_saat = setup_stats.get("total_setup_hour", 0)
+    kucuk_setup_saat = setup_stats.get("small_setup_hour", 0)
+    buyuk_setup_saat = setup_stats.get("large_setup_hour", 0)
+
+    kucuk_setup_orani = setup_stats.get("small_setup_ratio", 0)
 
     # =========================
     # 🧠 YORUM MOTORU
@@ -2423,6 +2531,25 @@ def summary_markdown(
         f"- {secilen_boy} boy altı kalıp sayısı: **{kucuk_kalip:,}**",
         f"- Oranı: **%{kalip_oran:.1f}**",
         f"- Tahmini setup süresi: **{toplam_sure_saat:.1f} saat**",
+        "",
+        "## 🔁 Gerçek Kalıp Bağlama Analizi",
+        f"- Toplam benzersiz kalıp: **{toplam_kalip:,}**",
+        f"- Toplam gerçek kalıp bağlama: **{toplam_setup_sayisi:,} kez**",
+        f"- Kalıp başına ortalama tekrar: **{setup_tekrar_ort}**",
+        f"- Toplam gerçek setup süresi: **{toplam_setup_saat:,.1f} saat**",
+
+        "",
+        f"### {secilen_boy} Boy ve Altı Setup Yükü",
+        f"- Benzersiz küçük kalıp: **{kucuk_kalip:,}**",
+        f"- Gerçek küçük setup sayısı: **{kucuk_setup_sayisi:,} kez**",
+        f"- Toplam setup içindeki payı: **%{kucuk_setup_orani:.1f}**",
+        f"- Küçük kalıp başına ortalama tekrar: **{kucuk_setup_tekrar_ort}**",
+        f"- Küçük setup süresi: **{kucuk_setup_saat:,.1f} saat**",
+
+        "",
+        f"### {secilen_boy} Boy Üstü Setup Yükü",
+        f"- Gerçek büyük setup sayısı: **{buyuk_setup_sayisi:,} kez**",
+        f"- Büyük setup süresi: **{buyuk_setup_saat:,.1f} saat**",     
 
         "",
         "## 📊 Kalıp Kullanım Dağılımı",
@@ -2561,6 +2688,22 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     top_n_value = int(top_n_sec)
 
     summary_small_text = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
+    setup_stats = build_setup_analysis(scope_df, int(secilen_boy))
+
+    setup_summary_df = pd.DataFrame([
+        ["Toplam Benzersiz Kalıp", setup_stats.get("total_unique_mold", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Benzersiz Kalıp", setup_stats.get("small_unique_mold", 0)],
+        ["Toplam Gerçek Kalıp Bağlama", setup_stats.get("total_setup_count", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Gerçek Kalıp Bağlama", setup_stats.get("small_setup_count", 0)],
+        ["Toplam Ortalama Tekrar", setup_stats.get("avg_repeat_total", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Ortalama Tekrar", setup_stats.get("avg_repeat_small", 0)],
+        ["Toplam Setup Süresi (Saat)", setup_stats.get("total_setup_hour", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Setup Süresi (Saat)", setup_stats.get("small_setup_hour", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Setup Oranı (%)", setup_stats.get("small_setup_ratio", 0)],
+    ], columns=["Metrik", "Değer"])
+
+    top_setup_repeat_df = setup_stats.get("top_repeat_df", pd.DataFrame())
+    small_top_setup_repeat_df = setup_stats.get("small_top_repeat_df", pd.DataFrame())    
     boy_df = build_boy_breakdown(filtered, int(secilen_boy))
     profile_df = build_profile_summary(filtered, hedef_uretim)
     year_df = build_year_summary(filtered)
@@ -2641,6 +2784,9 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         profile_df,
         raw.head(500),
         monthly_load_df,
+        setup_summary_df,
+        top_setup_repeat_df,
+        small_top_setup_repeat_df,
         boy_breakdown_chart(boy_df),
         top_profiles_chart(profile_df, top_n_value),
         monthly_chart(filtered),
@@ -3088,6 +3234,19 @@ def generate_professional_pdf(
     scenario_df = build_scenario_table(scope_df, int(secilen_boy), hedef_kucuk_oran)
     scenario_md = scenario_summary_markdown(scope_df, int(secilen_boy), hedef_kucuk_oran)
     profile_df = build_profile_summary(filtered, hedef_uretim)
+    setup_stats = build_setup_analysis(scope_df, int(secilen_boy))
+
+    setup_summary_df = pd.DataFrame([
+        ["Toplam Benzersiz Kalıp", setup_stats.get("total_unique_mold", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Benzersiz Kalıp", setup_stats.get("small_unique_mold", 0)],
+        ["Toplam Gerçek Kalıp Bağlama", setup_stats.get("total_setup_count", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Gerçek Kalıp Bağlama", setup_stats.get("small_setup_count", 0)],
+        ["Toplam Ortalama Tekrar", setup_stats.get("avg_repeat_total", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Ortalama Tekrar", setup_stats.get("avg_repeat_small", 0)],
+        ["Toplam Setup Süresi (Saat)", setup_stats.get("total_setup_hour", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Setup Süresi (Saat)", setup_stats.get("small_setup_hour", 0)],
+        [f"{int(secilen_boy)} Boy ve Altı Setup Oranı (%)", setup_stats.get("small_setup_ratio", 0)],
+    ], columns=["Metrik", "Değer"])    
 
     monthly_fig = dashboard_monthly_chart(dashboard_monthly_df)
     abc_fig = abc_chart(abc_df, top_n_value)
@@ -3164,13 +3323,21 @@ def generate_professional_pdf(
     elements.append(Spacer(1, 8))
     elements.append(Paragraph("3. Küçük Sipariş Özeti", styles["section"]))
     elements.append(Paragraph(clean_markdown_for_pdf(summary_small_text), styles["body"]))
+    
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("4. Gerçek Kalıp Bağlama Analizi", styles["section"]))
+    elements.append(dataframe_to_pdf_table(
+        setup_summary_df,
+        max_rows=20,
+        col_widths=[95 * mm, 45 * mm]
+    ))    
 
     elements.append(Spacer(1, 8))
-    elements.append(Paragraph("4. Büyük Sipariş Özeti", styles["section"]))
+    elements.append(Paragraph("5. Büyük Sipariş Özeti", styles["section"]))
     elements.append(Paragraph(clean_markdown_for_pdf(high_md), styles["body"]))
     elements.append(PageBreak())
 
-    elements.append(Paragraph("5. ABC Analizi ve Stok Önerisi", styles["section"]))
+    elements.append(Paragraph("6. ABC Analizi ve Stok Önerisi", styles["section"]))
     elements.append(Paragraph(clean_markdown_for_pdf(abc_md), styles["body"]))
     elements.append(dataframe_to_pdf_table(
         abc_df,
@@ -3179,7 +3346,7 @@ def generate_professional_pdf(
     ))
 
     elements.append(Spacer(1, 8))
-    elements.append(Paragraph("6. Senaryo Özeti", styles["section"]))
+    elements.append(Paragraph("7. Senaryo Özeti", styles["section"]))
     elements.append(Paragraph(clean_markdown_for_pdf(scenario_md), styles["body"]))
     elements.append(dataframe_to_pdf_table(
         scenario_df,
@@ -3188,7 +3355,7 @@ def generate_professional_pdf(
     ))
 
     elements.append(Spacer(1, 8))
-    elements.append(Paragraph("7. Kritik Profil Özeti", styles["section"]))
+    elements.append(Paragraph("8. Kritik Profil Özeti", styles["section"]))
     elements.append(dataframe_to_pdf_table(
         profile_df,
         max_rows=15,
@@ -3196,7 +3363,7 @@ def generate_professional_pdf(
     ))
     elements.append(PageBreak())
 
-    elements.append(Paragraph("8. Grafikler", styles["section"]))
+    elements.append(Paragraph("9. Grafikler", styles["section"]))
     chart_titles = [
         "Aylık Üretim Trendi",
         "ABC Analizi",
@@ -3212,7 +3379,7 @@ def generate_professional_pdf(
             elements.append(Spacer(1, 8))
 
     elements.append(PageBreak())
-    elements.append(Paragraph("9. Dashboard Tabloları", styles["section"]))
+    elements.append(Paragraph("10. Dashboard Tabloları", styles["section"]))
 
     elements.append(Paragraph("Aylık Dashboard Verisi", styles["section"]))
     elements.append(dataframe_to_pdf_table(
@@ -3354,6 +3521,15 @@ with gr.Blocks(
 
                         with gr.Tab("Ham Kayıt Önizleme"):
                             raw_table = gr.Dataframe(interactive=False, wrap=True)
+                        
+                        with gr.Tab("🔧 Gerçek Setup Özeti"):
+                            setup_summary_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("🔁 En Çok Tekrar Bağlanan Kalıplar"):
+                            top_setup_repeat_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("🔴 Küçük Siparişte En Çok Tekrar Eden Kalıplar"):
+                            small_top_setup_repeat_table = gr.Dataframe(interactive=False, wrap=True)
 
                 with gr.Tab("🚫 Eşiği Hiç Aşmamış Profiller"):
                     never_summary_md = gr.Markdown()
@@ -3611,6 +3787,9 @@ with gr.Blocks(
             profile_table,
             raw_table,
             monthly_load_table,
+            setup_summary_table,
+            top_setup_repeat_table,
+            small_top_setup_repeat_table,
             chart1,
             chart2,
             chart3,
