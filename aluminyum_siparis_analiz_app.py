@@ -486,7 +486,7 @@ def build_never_profile_repeat(never_df: pd.DataFrame):
         "son_siparis": "Son Sipariş Tarihi",
     })
 
-    return repeat.sort_values("Farklı Sipariş Sayısı", ascending=False)
+    return repeat.sort_values("Tekrar Sayısı", ascending=False)
 
 def build_never_repeat_distribution(repeat_df):
     if repeat_df.empty:
@@ -2707,7 +2707,7 @@ def never_exceed_summary_markdown(
 
     if repeat_df is not None and not repeat_df.empty:
         repeat_work = repeat_df.copy()
-        repeat_col = "Farklı Sipariş Sayısı"
+        repeat_col = "Tekrar Sayısı"
 
         en_cok_tekrar = int(repeat_work[repeat_col].max()) if not repeat_work.empty else 0
         ortalama_tekrar = round(float(repeat_work[repeat_col].mean()), 2) if not repeat_work.empty else 0
