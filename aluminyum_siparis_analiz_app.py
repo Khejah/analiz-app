@@ -479,7 +479,7 @@ def build_never_profile_repeat(never_df: pd.DataFrame):
 
     repeat = repeat.rename(columns={
         "profil": "Profil Kodu",
-        "siparis_sayisi": "Farklı Sipariş Sayısı",
+        "siparis_sayisi": "Tekrar Sayısı",
         "toplam_boy": "Toplam Üretim (Boy)",
         "ortalama_boy": "Ortalama Sipariş Boyu",
         "ilk_siparis": "İlk Sipariş Tarihi",
@@ -493,7 +493,7 @@ def build_never_repeat_distribution(repeat_df):
         return pd.DataFrame(columns=["Tekrar Sayısı", "Profil Sayısı"])
 
     dist = (
-        repeat_df["Farklı Sipariş Sayısı"]
+        repeat_df["Tekrar Sayısı"]
         .value_counts()
         .sort_index()
         .reset_index()
@@ -501,6 +501,65 @@ def build_never_repeat_distribution(repeat_df):
     dist.columns = ["Tekrar Sayısı", "Profil Sayısı"]
     return dist
 
+def build_never_repeat_deep_analysis(repeat_df: pd.DataFrame):
+    """
+    Eşiği hiç aşmamış profiller içinde tekrar davranışını daha derin analiz eder.
+
+    Çıktılar:
+    - 5 ve üstü tekrar eden profillerin detay tablosu
+    - 5 altı tekrar edenlerin dağılım tablosu
+    - özet istatistik sözlüğü
+    """
+    if repeat_df.empty:
+        empty_high = pd.DataFrame(columns=["Profil Kodu", "Tekrar Sayısı"])
+        empty_low = pd.DataFrame(columns=["Tekrar Sayısı", "Profil Sayısı"])
+        stats = {
+            "repeat_5_plus_count": 0,
+            "repeat_5_plus_profiles": [],
+            "repeat_5_plus_top_text": "",
+            "repeat_under_5_breakdown": []
+        }
+        return empty_high, empty_low, stats
+
+    work = repeat_df.copy()
+
+    tekrar_col = "Tekrar Sayısı"
+    profil_col = "Profil Kodu"
+
+    work["Tekrar Sayısı"] = pd.to_numeric(work[tekrar_col], errors="coerce").fillna(0).astype(int)
+
+    # 5 ve üstü tekrar edenler
+    repeat_5_plus_df = (
+        work[work["Tekrar Sayısı"] >= 5][[profil_col, "Tekrar Sayısı"]]
+        .sort_values(["Tekrar Sayısı", profil_col], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+
+    # 5 altı tekrar edenler (çakışmayı önlemek için)
+    repeat_under_5_dist_df = (
+        work[(work["Tekrar Sayısı"] >= 1) & (work["Tekrar Sayısı"] < 5)]
+        .groupby("Tekrar Sayısı", as_index=False)
+        .agg(**{"Profil Sayısı": (profil_col, "count")})
+        .sort_values("Tekrar Sayısı")
+        .reset_index(drop=True)
+    )
+
+    repeat_5_plus_profiles = repeat_5_plus_df.to_dict("records")
+    repeat_under_5_breakdown = repeat_under_5_dist_df.to_dict("records")
+
+    top_lines = []
+    for _, row in repeat_5_plus_df.iterrows():
+        top_lines.append(f"- **{row[profil_col]}** → **{int(row['Tekrar Sayısı'])} kez** tekrar etmiş")
+
+    stats = {
+        "repeat_5_plus_count": int(len(repeat_5_plus_df)),
+        "repeat_5_plus_profiles": repeat_5_plus_profiles,
+        "repeat_5_plus_top_text": "\n".join(top_lines),
+        "repeat_under_5_breakdown": repeat_under_5_breakdown,
+    }
+
+    return repeat_5_plus_df, repeat_under_5_dist_df, stats
+    
 def add_repeat_segment(df):
     if df.empty:
         return df
@@ -510,10 +569,12 @@ def add_repeat_segment(df):
             return "Tek Seferlik"
         elif x <= 3:
             return "Düşük Tekrar"
+        elif x <= 4:
+            return "Orta Tekrar"
         else:
-            return "Potansiyel"
+            return "Yüksek Tekrar"
 
-    df["Segment"] = df["Farklı Sipariş Sayısı"].apply(segment)
+    df["Segment"] = df["Tekrar Sayısı"].apply(segment)
     return df
 
 def never_repeat_chart_func(dist_df):
@@ -2579,7 +2640,9 @@ def summary_markdown(
 def never_exceed_summary_markdown(
     never_df: pd.DataFrame,
     scope_df: pd.DataFrame,
-    secilen_boy: int
+    secilen_boy: int,
+    repeat_df: pd.DataFrame = None,
+    repeat_deep_stats: dict = None
 ) -> str:
     if never_df.empty:
         return (
@@ -2594,12 +2657,12 @@ def never_exceed_summary_markdown(
     toplam_adet = int(never_df["adet"].sum())
     toplam_kg = float(never_df["kg"].fillna(0).sum())
     benzersiz_profil = int(never_df["profil"].nunique())
-    # 🔧 KALIP ANALİZİ (Eşiği Aşmayan Profiller)
+
     toplam_kalip = scope_df["profil"].nunique()
     never_kalip = never_df["profil"].nunique()
     kalip_oran = (never_kalip / toplam_kalip * 100) if toplam_kalip > 0 else 0
     toplam_sure_saat = (never_kalip * 5) / 60
-    # KALIP DEĞİŞİM KODU ÜSTTEKİ 4 SATIR
+
     benzersiz_siparis = int(never_df["siparis_no"].nunique())
 
     genel_satir = len(scope_df)
@@ -2640,6 +2703,52 @@ def never_exceed_summary_markdown(
         "### Genel İçindeki Payı",
         f"- Toplam satır içindeki payı: **%{satir_oran:.1f}**",
         f"- Toplam üretim içindeki payı: **%{adet_oran:.1f}**",
+    ]
+
+    if repeat_df is not None and not repeat_df.empty:
+        repeat_work = repeat_df.copy()
+        repeat_col = "Farklı Sipariş Sayısı"
+
+        en_cok_tekrar = int(repeat_work[repeat_col].max()) if not repeat_work.empty else 0
+        ortalama_tekrar = round(float(repeat_work[repeat_col].mean()), 2) if not repeat_work.empty else 0
+
+        lines += [
+            "",
+            "### 🔁 Tekrar Analizi Özeti",
+            f"- Tekrar analiz edilen profil sayısı: **{len(repeat_work):,}**",
+            f"- En yüksek tekrar sayısı: **{en_cok_tekrar}**",
+            f"- Ortalama tekrar sayısı: **{ortalama_tekrar}**",
+        ]
+
+    if repeat_deep_stats:
+        repeat_5_plus_count = int(repeat_deep_stats.get("repeat_5_plus_count", 0))
+        repeat_5_plus_top_text = repeat_deep_stats.get("repeat_5_plus_top_text", "")
+        repeat_under_5_breakdown = repeat_deep_stats.get("repeat_under_5_breakdown", [])
+
+        lines += [
+            "",
+            "### 🔥 Derin Tekrar Katmanı",
+            f"- **5 kez ve üstü** tekrar eden profil adedi: **{repeat_5_plus_count}**",
+        ]
+
+        if repeat_5_plus_top_text:
+            lines += [
+                "",
+                "#### 5 Kez ve Üstü Tekrar Eden Profiller",
+                repeat_5_plus_top_text
+            ]
+
+        if repeat_under_5_breakdown:
+            lines += [
+                "",
+                "#### 5 Altı Tekrar Dağılımı",
+            ]
+            for row in repeat_under_5_breakdown:
+                lines.append(
+                    f"- **{int(row['Tekrar Sayısı'])} kez** tekrar eden profil sayısı: **{int(row['Profil Sayısı'])}**"
+                )
+
+    lines += [
         "",
         "### Yönetim Yorumu",
         f"- Bunlar gerçekten **{secilen_boy} boy üstüne hiç çıkmamış** profillerdir.",
@@ -2708,13 +2817,25 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     profile_df = build_profile_summary(filtered, hedef_uretim)
     year_df = build_year_summary(filtered)
     monthly_load_df = build_small_order_monthly(scope_df, int(secilen_boy))
-    never_summary_text = never_exceed_summary_markdown(never_exceed_df, scope_df, int(secilen_boy))
     never_boy_df = build_boy_breakdown(never_exceed_df, int(secilen_boy))
     never_profile_df = build_profile_summary(never_exceed_df, hedef_uretim)
     never_year_df = build_year_summary(never_exceed_df)
-    never_repeat_df = build_never_profile_repeat(never_exceed_df)
-    never_repeat_df = add_repeat_segment(never_repeat_df)
-    never_repeat_dist = build_never_repeat_distribution(never_repeat_df)
+    
+    never_repeat_base_df = build_never_profile_repeat(never_exceed_df)
+    
+    never_repeat_5_plus_df, never_repeat_under_5_dist_df, never_repeat_deep_stats = \
+        build_never_repeat_deep_analysis(never_repeat_base_df)
+    
+    never_repeat_df = add_repeat_segment(never_repeat_base_df.copy())
+    never_repeat_dist = build_never_repeat_distribution(never_repeat_base_df)
+    
+    never_summary_text = never_exceed_summary_markdown(
+        never_exceed_df,
+        scope_df,
+        int(secilen_boy),
+        repeat_df=never_repeat_base_df,
+        repeat_deep_stats=never_repeat_deep_stats
+    )
     
     never_raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     never_raw_df = never_exceed_df[never_raw_cols].sort_values("tarih", ascending=False).copy() if not never_exceed_df.empty else pd.DataFrame(columns=never_raw_cols)
