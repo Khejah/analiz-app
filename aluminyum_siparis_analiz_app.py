@@ -4322,7 +4322,7 @@ with gr.Blocks(
             season_customer_md,
         ]
     )
-    wweerkg_limit_select.change(
+    kg_limit_select.change(
         fn=load_kg_analysis,
         inputs=[kg_limit_select, excel_file, years, profil_ara],
         outputs=[
