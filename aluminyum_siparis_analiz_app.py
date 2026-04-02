@@ -2498,7 +2498,7 @@ def summary_markdown(
     # =========================
     # 📝 OUTPUT
     # =========================
-    top_lines = [
+    lines = [
         "## 📊 Özet Bilgi",
         f"- İncelenen sipariş tipi: **{mod}**",
         f"- Küçük sipariş eşiği: **{secilen_boy} boy**",
@@ -2508,16 +2508,15 @@ def summary_markdown(
         f"- Farklı profil sayısı: **{farkli_profil:,}**",
         f"- Toplam üretilen boy: **{toplam_adet:,}**",
         f"- Toplam ağırlık: **{toplam_kg:,.2f} kg**",
-    
+
         "",
         "## 📦 Sipariş Dağılımı (Sipariş Bazlı)",
         f"- Toplam sipariş: **{toplam_siparis:,}**",
         f"- 🔴 Sadece küçük sipariş: **{sadece_kucuk_siparis:,}**",
         f"- 🟢 Sadece büyük sipariş: **{sadece_buyuk_siparis:,}**",
         f"- 🟡 Hem küçük hem büyük: **{karisik_siparis:,}**",
-    ]
 
-    distribution_lines = [
+        "",
         "## 🔩 Dağılım Oranları",
         f"- Sadece küçük siparişlerin toplam sipariş içindeki payı: **%{sadece_kucuk_siparis_orani:.1f}**",
         f"- Küçük geçen siparişlerin toplam sipariş içindeki payı: **%{kucuk_gecen_siparis_orani:.1f}**",
@@ -2525,9 +2524,8 @@ def summary_markdown(
         f"- Büyük geçen siparişlerin toplam sipariş içindeki payı: **%{buyuk_gecen_siparis_orani:.1f}**",
         f"- Toplam kayıt içinde küçük siparişlerin payı: **%{satir_yuzde:.1f}**",
         f"- Toplam üretim içinde küçük siparişlerin payı: **%{adet_yuzde:.1f}**",
-    ]
 
-    bottom_lines = [
+        "",
         "## 🔧 Kalıp Analizi",
         f"- Toplam kalıp sayısı: **{toplam_kalip:,}**",
         f"- {secilen_boy} boy altı kalıp sayısı: **{kucuk_kalip:,}**",
@@ -2539,7 +2537,7 @@ def summary_markdown(
         f"- Toplam gerçek kalıp bağlama: **{toplam_setup_sayisi:,} kez**",
         f"- Kalıp başına ortalama tekrar: **{setup_tekrar_ort}**",
         f"- Toplam gerçek setup süresi: **{toplam_setup_saat:,.1f} saat**",
-    
+
         "",
         f"### {secilen_boy} Boy ve Altı Setup Yükü",
         f"- Benzersiz küçük kalıp: **{kucuk_kalip:,}**",
@@ -2547,18 +2545,18 @@ def summary_markdown(
         f"- Toplam setup içindeki payı: **%{kucuk_setup_orani:.1f}**",
         f"- Küçük kalıp başına ortalama tekrar: **{kucuk_setup_tekrar_ort}**",
         f"- Küçük setup süresi: **{kucuk_setup_saat:,.1f} saat**",
-    
+
         "",
         f"### {secilen_boy} Boy Üstü Setup Yükü",
         f"- Gerçek büyük setup sayısı: **{buyuk_setup_sayisi:,} kez**",
-        f"- Büyük setup süresi: **{buyuk_setup_saat:,.1f} saat**",
-    
+        f"- Büyük setup süresi: **{buyuk_setup_saat:,.1f} saat**",     
+
         "",
         "## 📊 Kalıp Kullanım Dağılımı",
         f"- 🔴 Sadece küçük sipariş: **{sadece_kucuk_kalip:,}**",
         f"- 🟢 Sadece büyük sipariş: **{sadece_buyuk_kalip:,}**",
         f"- 🟡 Her iki sipariş türü: **{ortak_kalip:,}**",
-    
+
         "",
         "## 🧠 Genel Yorum",
         f"- {yorum}",
@@ -2566,8 +2564,8 @@ def summary_markdown(
 
     if mod == "Seçilen boy ve altı":
         exact = filtered[filtered["adet"] == secilen_boy]
-    
-        bottom_lines += [
+
+        lines += [
             "",
             f"**Tam {secilen_boy} boy olanlar (Seçilen Boy Sayısı)**",
             f"- Satır sayısı: **{len(exact):,}**",
@@ -2576,11 +2574,7 @@ def summary_markdown(
             f"- Toplam adet: **{int(exact['adet'].sum()):,}**",
         ]
 
-    return (
-        "\n".join(top_lines),
-        "\n".join(distribution_lines),
-        "\n".join(bottom_lines),
-    )
+    return "\n".join(lines)
 
 def never_exceed_summary_markdown(
     never_df: pd.DataFrame,
@@ -2693,9 +2687,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     hedef_uretim = int(hedef_uretim)
     top_n_value = int(top_n_sec)
 
-    summary_top_text, summary_distribution_text, summary_bottom_text = summary_markdown(
-        filtered, scope_df, int(secilen_boy), mod
-    )
+    summary_small_text = summary_markdown(filtered, scope_df, int(secilen_boy), mod)
     setup_stats = build_setup_analysis(scope_df, int(secilen_boy))
 
     setup_summary_df = pd.DataFrame([
@@ -2786,9 +2778,7 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     )
 
     result = (
-        summary_top_text,
-        summary_distribution_text,
-        summary_bottom_text,
+        summary_small_text,
         boy_df,
         year_df,
         profile_df,
@@ -3491,13 +3481,7 @@ with gr.Blocks(
             with gr.Tabs():
 
                 with gr.Tab("📉 Küçük Sipariş Analizi (Operasyonel Yük)"):
-                    summary_top_md = gr.Markdown()
-                
-                    with gr.Accordion("🔩 Dağılım Oranları", open=False):
-                        summary_distribution_md = gr.Markdown()
-                
-                    summary_bottom_md = gr.Markdown()
-                
+                    summary_small = gr.Markdown()
                     gr.Markdown("""
                     ### 📌 Bu ekran neyi gösterir?
                     
@@ -3797,9 +3781,7 @@ with gr.Blocks(
         fn=analyze,
         inputs=[excel_file, secilen_boy, mod, years, profil_ara, hedef_uretim, top_n_sec, hedef_kucuk_oran],
         outputs=[
-            summary_top_md,
-            summary_distribution_md,
-            summary_bottom_md,
+            summary_small,
             boy_table,
             year_table,
             profile_table,
