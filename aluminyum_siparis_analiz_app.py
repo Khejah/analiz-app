@@ -105,6 +105,8 @@ COLUMN_ALIASES_PRO = {
 
 # KALIP SÜRESİ HESAPLAMAK İÇİN SABİT
 SETUP_SURESI_DAKIKA = 5
+# KİLO LİMİTLERİNİ BELİRLEME SABİTLERİ
+KG_LIMIT_OPTIONS = [100, 200, 300, 400, 500]
 
 def normalize_text(s):
     if s is None:
@@ -1593,6 +1595,210 @@ def scenario_summary_markdown(scope_df: pd.DataFrame, secilen_boy: int, hedef_ku
         "- Bu tablo karar toplantısında direkt kullanılabilir",
     ]
     return "\n".join(lines)
+
+# =========================
+# KİLO BAZLI HESAPLAMA ENGINE
+# =========================
+
+def build_kg_segment_summary(scope_df: pd.DataFrame, kg_limit: int):
+    if scope_df.empty:
+        empty_summary = pd.DataFrame(columns=["Metrik", f"≤ {kg_limit} Kg", f"> {kg_limit} Kg"])
+        empty_common = pd.DataFrame(columns=["Kategori", "Adet"])
+        empty_profile_detail = pd.DataFrame(columns=["Grup", "Profil", "Toplam Boy", "Toplam Kg", "Sipariş Sayısı"])
+        return empty_summary, empty_common, empty_profile_detail
+
+    df = scope_df.copy()
+    df["kg"] = pd.to_numeric(df["kg"], errors="coerce").fillna(0)
+
+    alt_df = df[df["kg"] <= kg_limit].copy()
+    ust_df = df[df["kg"] > kg_limit].copy()
+
+    alt_profiles = set(alt_df["profil"].dropna().astype(str).str.strip())
+    ust_profiles = set(ust_df["profil"].dropna().astype(str).str.strip())
+
+    ortak_profiles = alt_profiles & ust_profiles
+    sadece_alt_profiles = alt_profiles - ust_profiles
+    sadece_ust_profiles = ust_profiles - alt_profiles
+
+    summary_df = pd.DataFrame([
+        ["Satır Sayısı", len(alt_df), len(ust_df)],
+        ["Farklı Sipariş Sayısı", int(alt_df["siparis_no"].nunique()), int(ust_df["siparis_no"].nunique())],
+        ["Farklı Profil Sayısı", int(alt_df["profil"].nunique()), int(ust_df["profil"].nunique())],
+        ["Toplam Üretim (Boy)", int(alt_df["adet"].sum()), int(ust_df["adet"].sum())],
+        ["Toplam Kg", round(float(alt_df["kg"].sum()), 2), round(float(ust_df["kg"].sum()), 2)],
+        ["Kalıp Sayısı (Profil)", len(alt_profiles), len(ust_profiles)],
+    ], columns=["Metrik", f"≤ {kg_limit} Kg", f"> {kg_limit} Kg"])
+
+    common_df = pd.DataFrame([
+        ["Ortak Kalıplar", len(ortak_profiles)],
+        [f"Sadece ≤ {kg_limit} Kg", len(sadece_alt_profiles)],
+        [f"Sadece > {kg_limit} Kg", len(sadece_ust_profiles)],
+    ], columns=["Kategori", "Adet"])
+
+    detail_rows = []
+
+    alt_profile_detail = (
+        alt_df.groupby("profil", as_index=False)
+        .agg(
+            toplam_boy=("adet", "sum"),
+            toplam_kg=("kg", "sum"),
+            siparis_sayisi=("siparis_no", pd.Series.nunique)
+        )
+        .sort_values(["toplam_boy", "toplam_kg"], ascending=[False, False])
+        .head(20)
+    )
+
+    for _, row in alt_profile_detail.iterrows():
+        detail_rows.append({
+            "Grup": f"≤ {kg_limit} Kg",
+            "Profil": row["profil"],
+            "Toplam Boy": int(row["toplam_boy"]),
+            "Toplam Kg": round(float(row["toplam_kg"]), 2),
+            "Sipariş Sayısı": int(row["siparis_sayisi"])
+        })
+
+    ust_profile_detail = (
+        ust_df.groupby("profil", as_index=False)
+        .agg(
+            toplam_boy=("adet", "sum"),
+            toplam_kg=("kg", "sum"),
+            siparis_sayisi=("siparis_no", pd.Series.nunique)
+        )
+        .sort_values(["toplam_boy", "toplam_kg"], ascending=[False, False])
+        .head(20)
+    )
+
+    for _, row in ust_profile_detail.iterrows():
+        detail_rows.append({
+            "Grup": f"> {kg_limit} Kg",
+            "Profil": row["profil"],
+            "Toplam Boy": int(row["toplam_boy"]),
+            "Toplam Kg": round(float(row["toplam_kg"]), 2),
+            "Sipariş Sayısı": int(row["siparis_sayisi"])
+        })
+
+    detail_df = pd.DataFrame(detail_rows)
+
+    return summary_df, common_df, detail_df
+    
+# =======================================    
+# KİLO BAZLI MARKDOWN AÇIKLAMA FONKSİYONU
+# =======================================
+
+def kg_segment_summary_markdown(scope_df: pd.DataFrame, kg_limit: int) -> str:
+    if scope_df.empty:
+        return "### Sonuç\nKilo bazlı analiz için veri bulunamadı."
+
+    df = scope_df.copy()
+    df["kg"] = pd.to_numeric(df["kg"], errors="coerce").fillna(0)
+
+    alt_df = df[df["kg"] <= kg_limit].copy()
+    ust_df = df[df["kg"] > kg_limit].copy()
+
+    toplam_satir = len(df)
+    alt_satir = len(alt_df)
+    ust_satir = len(ust_df)
+
+    toplam_boy = int(df["adet"].sum())
+    alt_boy = int(alt_df["adet"].sum())
+    ust_boy = int(ust_df["adet"].sum())
+
+    toplam_kg = float(df["kg"].sum())
+    alt_kg = float(alt_df["kg"].sum())
+    ust_kg = float(ust_df["kg"].sum())
+
+    alt_profiles = set(alt_df["profil"].dropna().astype(str).str.strip())
+    ust_profiles = set(ust_df["profil"].dropna().astype(str).str.strip())
+
+    ortak_profiles = alt_profiles & ust_profiles
+    sadece_alt_profiles = alt_profiles - ust_profiles
+    sadece_ust_profiles = ust_profiles - alt_profiles
+
+    alt_satir_oran = (alt_satir / toplam_satir * 100) if toplam_satir else 0
+    ust_satir_oran = (ust_satir / toplam_satir * 100) if toplam_satir else 0
+
+    alt_boy_oran = (alt_boy / toplam_boy * 100) if toplam_boy else 0
+    ust_boy_oran = (ust_boy / toplam_boy * 100) if toplam_boy else 0
+
+    alt_kg_oran = (alt_kg / toplam_kg * 100) if toplam_kg else 0
+    ust_kg_oran = (ust_kg / toplam_kg * 100) if toplam_kg else 0
+
+    yorum = []
+    if alt_satir_oran > ust_satir_oran and alt_boy_oran < ust_boy_oran:
+        yorum.append("Alt kilo segmenti sipariş yükü oluşturuyor ama üretim katkısı görece daha düşük.")
+    if len(ortak_profiles) > 0:
+        yorum.append(f"İki segment arasında {len(ortak_profiles)} ortak kalıp/profil var.")
+    if len(sadece_alt_profiles) > len(sadece_ust_profiles):
+        yorum.append("Düşük kilo segmentinde segmente özel profil çeşitliliği daha yüksek.")
+    elif len(sadece_ust_profiles) > len(sadece_alt_profiles):
+        yorum.append("Yüksek kilo segmentinde segmente özel profil çeşitliliği daha yüksek.")
+    if not yorum:
+        yorum.append("Kilo segmentleri arasında dengeli bir yapı görülüyor.")
+
+    return "\n".join([
+        f"## ⚖️ Kilo Bazlı Analiz Özeti ({kg_limit} Kg Eşiği)",
+        "",
+        "### Genel Dağılım",
+        f"- Toplam kayıt: **{toplam_satir:,}**",
+        f"- Toplam üretim: **{toplam_boy:,} boy**",
+        f"- Toplam kg: **{toplam_kg:,.2f} kg**",
+        "",
+        f"### ≤ {kg_limit} Kg",
+        f"- Satır sayısı: **{alt_satir:,}** (%{alt_satir_oran:.1f})",
+        f"- Toplam boy: **{alt_boy:,}** (%{alt_boy_oran:.1f})",
+        f"- Toplam kg: **{alt_kg:,.2f}** (%{alt_kg_oran:.1f})",
+        f"- Farklı profil: **{len(alt_profiles):,}**",
+        "",
+        f"### > {kg_limit} Kg",
+        f"- Satır sayısı: **{ust_satir:,}** (%{ust_satir_oran:.1f})",
+        f"- Toplam boy: **{ust_boy:,}** (%{ust_boy_oran:.1f})",
+        f"- Toplam kg: **{ust_kg:,.2f}** (%{ust_kg_oran:.1f})",
+        f"- Farklı profil: **{len(ust_profiles):,}**",
+        "",
+        "### Kalıp / Profil Ortaklığı",
+        f"- Ortak kalıp/profil: **{len(ortak_profiles):,}**",
+        f"- Sadece alt segmentte olan: **{len(sadece_alt_profiles):,}**",
+        f"- Sadece üst segmentte olan: **{len(sadece_ust_profiles):,}**",
+        "",
+        "### Yönetim Yorumu",
+        *[f"- {x}" for x in yorum]
+    ])
+    
+# =======================================    
+# GRAFİK FONKSİYONU KİLO BAZLI BÖLÜM İÇİN
+# =======================================
+
+def kg_segment_chart(summary_df: pd.DataFrame, kg_limit: int):
+    if summary_df.empty:
+        return None
+
+    chart_df = summary_df[summary_df["Metrik"].isin([
+        "Satır Sayısı",
+        "Farklı Sipariş Sayısı",
+        "Farklı Profil Sayısı",
+        "Toplam Üretim (Boy)",
+        "Kalıp Sayısı (Profil)"
+    ])].copy()
+
+    melted = chart_df.melt(
+        id_vars="Metrik",
+        value_vars=[f"≤ {kg_limit} Kg", f"> {kg_limit} Kg"],
+        var_name="Grup",
+        value_name="Değer"
+    )
+
+    fig = px.bar(
+        melted,
+        x="Metrik",
+        y="Değer",
+        color="Grup",
+        barmode="group",
+        text="Değer",
+        title=f"Kilo Bazlı Karşılaştırma ({kg_limit} Kg Eşiği)"
+    )
+    fig.update_layout(height=450)
+    return fig
+    
     
 def abc_summary_markdown(abc_df: pd.DataFrame, scope_df: pd.DataFrame) -> str:
     if abc_df.empty:
@@ -2160,6 +2366,21 @@ def load_customer_detail(musteri, excel_file, secilen_boy, mod, yillar, profil_a
     scope_df = filter_scope_data(df, selected_years, profil_ara)
 
     return build_customer_detail(scope_df, musteri, int(secilen_boy))
+
+def load_kg_analysis(kg_limit, excel_file, yillar, profil_ara):
+    global GLOBAL_DF
+    df = GLOBAL_DF if GLOBAL_DF is not None else load_excel(excel_file)
+
+    selected_years = [int(str(y)) for y in yillar] if yillar else sorted(df["yil"].unique().tolist())
+    scope_df = filter_scope_data(df, selected_years, profil_ara)
+
+    kg_limit = int(kg_limit)
+
+    kg_md = kg_segment_summary_markdown(scope_df, kg_limit)
+    kg_summary_df, kg_common_df, kg_detail_df = build_kg_segment_summary(scope_df, kg_limit)
+    kg_fig = kg_segment_chart(kg_summary_df, kg_limit)
+
+    return kg_md, kg_summary_df, kg_common_df, kg_detail_df, kg_fig
 
 def season_profile_options():
     return [SEASON_PROFILE_ALL_LABEL] + SEASON_PROFILES
@@ -2866,6 +3087,11 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
     forecast_df = build_forecast_table(scope_df)
     scenario_df = build_scenario_table(scope_df, int(secilen_boy), hedef_kucuk_oran)
     scenario_md = scenario_summary_markdown(scope_df, int(secilen_boy), hedef_kucuk_oran)
+
+    default_kg_limit = 200
+    kg_summary_text = kg_segment_summary_markdown(scope_df, default_kg_limit)
+    kg_summary_df, kg_common_df, kg_detail_df = build_kg_segment_summary(scope_df, default_kg_limit)
+    kg_fig = kg_segment_chart(kg_summary_df, default_kg_limit)
     
     raw_cols = ["tarih", "firma_adi", "siparis_no", "musteri_siparis_no", "profil", "adet", "kg"]
     raw = filtered[raw_cols].sort_values("tarih", ascending=False).copy()
@@ -2925,13 +3151,16 @@ def analyze(excel_file, secilen_boy, mod, yillar, profil_ara, hedef_uretim, top_
         never_chart_boy,
         never_chart_profile,
         never_chart_monthly,
-    
         high_md,
         high_year_df,
         high_profile_df,
         high_raw_df,
         high_volume_chart(high_profile_df, top_n_value),
-    
+        kg_summary_text,
+        kg_summary_df,
+        kg_common_df,
+        kg_detail_df,
+        kg_fig,
         abc_md,
         abc_df,
         abc_chart(abc_df, top_n_value),
@@ -3692,6 +3921,41 @@ with gr.Blocks(
                         with gr.Tab("Ham Kayıt Önizleme"):
                             high_raw_table = gr.Dataframe(interactive=False, wrap=True)
 
+                with gr.Tab("⚖️ Kilo Bazlı Analiz"):
+                    gr.Markdown("""
+                    ### 📌 Bu ekran neyi gösterir?
+
+                    Bu bölüm siparişleri seçilen **kg eşiğine göre ikiye ayırır**:
+
+                    - **Seçilen kg ve altı**
+                    - **Seçilen kg üstü**
+
+                    Amaç:
+                    - Hangi kilo segmentinde kaç sipariş var görmek
+                    - Hangi segmentte kaç profil / kalıp çalışıyor görmek
+                    - Ortak kullanılan kalıpları görmek
+                    - Düşük ve yüksek kilo segmentlerini karşılaştırmak
+                    """)
+
+                    kg_limit_select = gr.Dropdown(
+                        label="⚖️ Kg Eşiği",
+                        choices=[str(x) for x in KG_LIMIT_OPTIONS],
+                        value="200"
+                    )
+
+                    kg_summary_md = gr.Markdown()
+                    kg_chart = gr.Plot(label="Kilo Segment Karşılaştırma")
+
+                    with gr.Tabs():
+                        with gr.Tab("Genel Karşılaştırma"):
+                            kg_summary_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Ortak / Ayrık Kalıplar"):
+                            kg_common_table = gr.Dataframe(interactive=False, wrap=True)
+
+                        with gr.Tab("Profil Detay"):
+                            kg_detail_table = gr.Dataframe(interactive=False, wrap=True)
+                            
                 with gr.Tab("📦 ABC Analizi ve Stok Önerisi"):
                     gr.Markdown("""
                     ### 📌 ABC Analizi
@@ -3931,6 +4195,11 @@ with gr.Blocks(
             high_profile_table,
             high_raw_table,
             high_chart,
+            kg_summary_md,
+            kg_summary_table,
+            kg_common_table,
+            kg_detail_table,
+            kg_chart,
             abc_summary,
             abc_table,
             abc_plot,
@@ -4051,6 +4320,17 @@ with gr.Blocks(
             season_customer_monthly_table,
             season_customer_chart,
             season_customer_md,
+        ]
+    )
+    wweerkg_limit_select.change(
+        fn=load_kg_analysis,
+        inputs=[kg_limit_select, excel_file, years, profil_ara],
+        outputs=[
+            kg_summary_md,
+            kg_summary_table,
+            kg_common_table,
+            kg_detail_table,
+            kg_chart
         ]
     )
 
